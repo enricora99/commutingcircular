@@ -28,7 +28,7 @@ header{background:var(--ink);color:var(--paper);padding:56px 24px 52px;border-bo
 .wrap{max-width:1100px;margin:0 auto}
 header h1{font-size:clamp(30px,5vw,52px);font-weight:800;letter-spacing:-.02em;line-height:1.05;margin-top:8px}
 header h1 .c{color:var(--signal)}
-header .sub{color:var(--stone-light);margin-top:22px;font-size:16px;max-width:680px;line-height:1.55}
+header .sub{color:var(--stone-light);margin-top:22px;font-size:16px;line-height:1.55}
 header .author{margin-top:26px;font-family:var(--mono);font-size:12px;color:var(--mint)}
 
 nav{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:2px solid var(--ink);box-shadow:0 1px 0 var(--stone-light)}
@@ -214,16 +214,120 @@ h2.sec{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
 .bandchip.b4{background:#FFE0D5}.bandchip.b5{background:#FFCFC2}
 
 footer{text-align:center;padding:30px;color:var(--stone);font-family:var(--mono);font-size:12px;border-top:1px solid var(--stone-light)}
-@media print{nav{position:static}.tab{display:none}.view{display:block!important}.layer-body{display:block!important}}
+footer a{color:var(--signal-deep);font-weight:600;text-decoration:none;border-bottom:1px solid var(--stone-light);transition:.15s}
+footer a:hover{color:var(--forest);border-bottom-color:var(--signal)}
+/* ===== REPORT (vista Sintesi) ===== */
+#report{border:2px solid var(--ink);border-radius:16px;overflow:hidden;background:#fff}
+.rep-head{background:var(--ink);color:var(--paper);padding:26px 28px}
+.rep-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mint)}
+.rep-title{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-top:10px;line-height:1.1}
+.rep-date{font-family:var(--mono);font-size:12px;color:var(--stone-light);margin-top:8px}
+.rep-section{padding:22px 28px;border-bottom:1px solid var(--paper-deep)}
+.rep-section:last-of-type{border-bottom:none}
+.rep-h{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--forest);font-weight:700;margin-bottom:16px}
+.rep-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:640px){.rep-scores{grid-template-columns:1fr 1fr}}
+.rep-score{border:1.5px solid var(--stone-light);border-radius:11px;padding:13px 14px}
+.rep-score .rs-lab{font-family:var(--mono);font-size:11px;color:var(--stone);text-transform:uppercase;letter-spacing:.04em}
+.rep-score .rs-val{font-family:var(--mono);font-size:28px;font-weight:800;line-height:1.1;margin:3px 0 5px}
+.rep-score .rs-band{font-size:12px;font-weight:600}
+.rep-score .rs-bar{height:6px;border-radius:3px;background:var(--paper-deep);overflow:hidden;margin-top:7px}
+.rep-score .rs-bar i{display:block;height:100%}
+.rep-score.crit .rs-val{color:var(--coral)}
+.rep-score.good .rs-val{color:var(--signal-deep)}
+.rep-ineff-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--paper-deep)}
+.rep-ineff-item:last-child{border-bottom:none}
+.rep-ineff-item .ri-code{font-family:var(--mono);font-weight:700;color:var(--forest);width:34px;flex-shrink:0}
+.rep-ineff-item .ri-bar{flex:1;height:14px;border-radius:7px;background:var(--paper-deep);overflow:hidden;position:relative;min-width:80px}
+.rep-ineff-item .ri-bar i{display:block;height:100%;border-radius:7px}
+.rep-ineff-item .ri-name{flex:1.4;font-size:13px;min-width:0}
+.rep-ineff-item .ri-val{font-family:var(--mono);font-weight:700;font-size:13px;width:62px;text-align:right;flex-shrink:0}
+.rep-ipi-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--paper-deep)}
+.rep-ipi-row:last-child{border-bottom:none}
+.rep-ipi-row .rank{font-family:var(--mono);color:var(--stone);font-size:13px;width:26px;flex-shrink:0}
+.rep-ipi-row .rname{flex:1;font-size:13.5px;font-weight:600}
+.rep-ipi-row .rnum{font-family:var(--mono);font-weight:800;font-size:17px}
+.rep-foot{padding:18px 28px;background:var(--paper);font-family:var(--mono);font-size:11px;color:var(--stone);text-align:center;line-height:1.5}
+.no-print{}
+
+/* ===== MOBILE ===== */
+@media(max-width:760px){
+  header{padding:34px 18px 30px}
+  header h1{font-size:30px}
+  header .sub{font-size:14px;margin-top:16px}
+  nav{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tabs{flex-wrap:nowrap;min-width:max-content}
+  .tab{flex:0 0 auto;min-width:auto;padding:13px 16px;font-size:13px}
+  main{padding:24px 16px 64px}
+  h2.sec{font-size:23px}
+  .lead{font-size:14px;margin-bottom:22px}
+  .layer-head{padding:15px 15px;gap:12px}
+  .layer-num{width:40px;height:40px}
+  .layer-titles .t{font-size:16px}
+  .layer-body{padding:0 15px 18px 15px}
+  .block-body{padding:16px}
+  .block-head{padding:13px 15px}
+  .block-head .bt{font-size:15px}
+  .formula{font-size:11.5px;padding:8px 11px;overflow-x:auto}
+  .scorerow select{font-size:16px;padding:10px}
+  .modalrow{grid-template-columns:1fr;gap:6px;padding:12px 0}
+  .modalrow .mfact{text-align:left}
+  .modalrow input{text-align:left;font-size:16px}
+  .modalrow > div:last-child{font-size:11px}
+  .kpibox{grid-template-columns:1fr 1fr}
+  .diag-override{flex-direction:column;align-items:stretch;gap:6px}
+  .diag-override input,.diag-override select{width:100%}
+  .diag-badge{font-size:11px}
+  .ipi-explain{grid-template-columns:1fr}
+  .intv .ihead{flex-wrap:wrap}
+  .intv .ihead select{font-size:14px;min-width:0}
+  .dr-item{flex-wrap:wrap}
+  .dr-add{width:100%;align-self:stretch;padding:9px}
+  .field input,.field select,.field textarea,.qcard select{font-size:16px}
+  .rep-head{padding:20px 18px}
+  .rep-title{font-size:20px}
+  .rep-section{padding:18px}
+  .rep-foot{padding:16px 18px}
+  .actions{flex-direction:column}
+  .btn{width:100%;text-align:center}
+  .legcard .lc-body{overflow-x:visible}
+  .legtable{min-width:0;display:block}
+  .legtable tr:first-child{display:none}
+  .legtable tr{display:block;border:1.5px solid var(--stone-light);border-radius:10px;padding:11px 13px;margin-bottom:10px;background:var(--paper)}
+  .legtable td{display:block;border:none;padding:2px 0;font-size:13.5px;color:var(--ink-soft)}
+  .legtable td:first-child{font-weight:700;color:var(--ink);font-size:14.5px;margin-bottom:3px}
+  .legtable td.code:first-child{font-family:var(--mono);color:var(--forest)}
+  .legtable td.scale:not(:first-child){font-family:var(--mono);font-size:12px;color:var(--stone)}
+  .bandlegend{gap:6px}
+  .bandchip{font-size:11.5px;padding:5px 9px}
+}
+@media(max-width:420px){
+  .kpibox{grid-template-columns:1fr}
+  .rep-scores{grid-template-columns:1fr 1fr}
+  header h1{font-size:26px}
+}
+
+/* ===== STAMPA: solo il report ===== */
+@media print{
+  @page{margin:14mm}
+  body{background:#fff}
+  nav,header,footer,.no-print,#view-ccf,#view-canvas,#view-ipi,#view-leg{display:none!important}
+  main{padding:0;max-width:none}
+  #view-sum{display:block!important}
+  #view-sum>h2,#view-sum>.lead{display:none}
+  #report{border:none;border-radius:0}
+  .rep-head{background:#0B1F1A!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rep-score,.rep-ineff-item .ri-bar,.rep-ineff-item .ri-bar i,.rep-score .rs-bar i,.prio{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rep-section{break-inside:avoid}
+}
 </style>
 </head>
 <body>
 
 <header>
   <div class="wrap">
-    <div class="eyebrow" style="color:var(--mint)">strumento interattivo</div>
     <h1>Circular Commuting <span class="c">:</span><br>Framework &amp; Canvas</h1>
-    <p class="sub">Diagnosi energy-aware della mobilità casa-lavoro e prioritizzazione degli interventi in chiave di economia circolare.</p>
+    <p class="sub">Diagnosi energy-aware della mobilità casa-lavoro e prioritizzazione degli interventi.</p>
   </div>
 </header>
 
@@ -231,7 +335,7 @@ footer{text-align:center;padding:30px;color:var(--stone);font-family:var(--mono)
   <div class="tabs">
     <button class="tab active" data-view="ccf"><span class="dot">▸</span> Framework</button>
     <button class="tab" data-view="canvas"><span class="dot">▸</span> Canvas</button>
-    <button class="tab" data-view="ipi"><span class="dot">▸</span> Prioritizzazione</button>
+    <button class="tab" data-view="ipi"><span class="dot">▸</span> IPI</button>
     <button class="tab" data-view="sum"><span class="dot">▸</span> Sintesi</button>
     <button class="tab" data-view="leg"><span class="dot">▸</span> Legenda</button>
   </div>
@@ -384,10 +488,37 @@ footer{text-align:center;padding:30px;color:var(--stone);font-family:var(--mono)
 <!-- VIEW 4: SUMMARY -->
 <section class="view" id="view-sum">
   <h2 class="sec">Sintesi diagnostica</h2>
-  <p class="lead">Quadro complessivo degli score del Canvas e ranking degli interventi prioritizzati.</p>
-  <div class="sumcard"><div class="eyebrow">profilo</div><div id="sum-profile" style="font-size:16px;font-weight:600;margin-top:4px">—</div><div class="sumgrid" id="sum-scores"></div></div>
-  <div class="sumcard"><div class="eyebrow">ranking interventi (IPI)</div><div id="sum-ipi" style="margin-top:12px"><p class="empty">Nessun intervento valutato.</p></div></div>
-  <div class="actions"><button class="btn primary" onclick="window.print()">Stampa / Esporta PDF</button><button class="btn ghost" onclick="resetAll()">Azzera tutto</button></div>
+  <p class="lead">Il report completo dell'analisi: profilo, indici, diagnosi delle inefficienze e priorità degli interventi. È questa la pagina pensata per la stampa e l'export PDF.</p>
+
+  <div class="actions no-print" style="margin-top:0;margin-bottom:22px">
+    <button class="btn primary" onclick="printReport()">Esporta report PDF</button>
+    <button class="btn ghost" onclick="resetAll()">Azzera tutto</button>
+  </div>
+
+  <div id="report">
+    <div class="rep-head">
+      <div class="rep-eyebrow">Circular Commuting Framework · report diagnostico</div>
+      <div class="rep-title" id="rep-profile">—</div>
+      <div class="rep-date" id="rep-date"></div>
+    </div>
+
+    <div class="rep-section">
+      <div class="rep-h">Indici di contesto</div>
+      <div class="rep-scores" id="rep-scores"></div>
+    </div>
+
+    <div class="rep-section">
+      <div class="rep-h">Diagnosi delle inefficienze</div>
+      <div id="rep-ineff"><p class="empty">Compila gli indici del Canvas per generare la diagnosi.</p></div>
+    </div>
+
+    <div class="rep-section">
+      <div class="rep-h">Priorità degli interventi (IPI)</div>
+      <div id="rep-ipi"><p class="empty">Nessun intervento valutato nella scheda IPI.</p></div>
+    </div>
+
+    <div class="rep-foot">Economia circolare applicata alla mobilità casa-lavoro: un framework energy-aware per l'efficientamento della capacità di trasporto</div>
+  </div>
 </section>
 
 <!-- VIEW 5: LEGENDA -->
@@ -457,7 +588,7 @@ footer{text-align:center;padding:30px;color:var(--stone);font-family:var(--mono)
 
 </main>
 
-<footer>Economia circolare applicata alla mobilità casa-lavoro: un framework energy-aware per l'efficientamento della capacità di trasporto</footer>
+<footer>made by <a href="https://linktr.ee/corazzini" target="_blank" rel="noopener">Enrico Emanuele Corazzini</a></footer>
 
 <script>
 function switchView(v){
@@ -902,32 +1033,56 @@ function calcIPI(it){
 }
 
 function buildSummary(){
-  const org=document.getElementById('org').value||'organizzazione',sede=document.getElementById('sede').value;
-  document.getElementById('sum-profile').textContent=org+(sede?' — '+sede:'');
-  const tiles=[
-    ['DMS',S.dms===null?'—':S.dms+'/5',S.dms===null?'':(S.dms<2?'critico':'ok'),S.dms===null?'':(S.dms<2?'crit':'good')],
-    ['MNS',S.mns===null?'—':Math.round(S.mns),S.mns===null?'':(S.mns<50?'remoto':S.mns<80?'mix':'presenza'),''],
-    ['ACC',S.acc===null?'—':Math.round(S.acc),S.acc===null?'':(S.acc<40?'critica':S.acc<60?'bassa':S.acc<80?'buona':'ottima'),S.acc===null?'':(S.acc<40?'crit':S.acc>=60?'good':'')],
-    ['CDR',S.cdr===null?'—':Math.round(S.cdr),S.cdr===null?'':(S.cdr<40?'bassa':S.cdr<60?'media':S.cdr<80?'alta':'critica'),S.cdr===null?'':(S.cdr>=60?'crit':'good')],
-    ['GCS',S.gcs===null?'—':S.gcs+'/5',S.gcs===null?'':(S.gcs>=4?'territoriale':'interno'),''],
-    ['tCO₂e/anno',S.kpi?S.kpi.tco2.toFixed(1):'—',S.kpi?'baseline':'',''],
-  ];
-  const ic=S.ineff;let topI='—',mx=-1;
-  for(const k in ic){if(ic[k]!==null&&ic[k]>mx){mx=ic[k];topI=k+' ('+ic[k]+')';}}
-  tiles.push(['Ineff. prevalente',topI,'','']);
-  const g=document.getElementById('sum-scores');g.innerHTML='';
-  const cm={crit:'var(--coral)',good:'var(--signal)'};
-  tiles.forEach(t=>{g.innerHTML+=`<div class="sumtile"><div class="lab">${t[0]}</div><div class="v" style="${t[3]?'color:'+cm[t[3]]:''}">${t[1]}</div><div class="b" style="color:var(--stone)">${t[2]}</div></div>`;});
-  const ranked=interventions.filter(i=>i.ipi!=null).sort((a,b)=>b.ipi-a.ipi);
-  const si=document.getElementById('sum-ipi');
-  if(ranked.length===0){si.innerHTML='<p class="empty">Nessun intervento valutato. Compila il calcolatore IPI.</p>';return;}
-  si.innerHTML='';
-  ranked.forEach((it,idx)=>{
-    const cls=it.ipi>12?'A':it.ipi>=6?'B':'C';
-    const nm=it.cat!==''?interventionCatalog[it.cat].label:'(intervento non selezionato)';
-    si.innerHTML+=`<div class="ipiout" style="margin-top:0;margin-bottom:10px"><span class="mono" style="color:var(--stone);font-size:13px">#${idx+1}</span><span style="flex:1;font-weight:600">${nm}</span><span class="num" style="font-size:20px">${it.ipi.toFixed(1)}</span><span class="prio ${cls}">${cls}</span></div>`;
+  const org=document.getElementById('org').value||'Organizzazione non specificata',sede=document.getElementById('sede').value;
+  document.getElementById('rep-profile').textContent=org+(sede?' — '+sede:'');
+  const d=new Date();
+  document.getElementById('rep-date').textContent='Report generato il '+d.toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
+
+  // --- SCORE ---
+  const scoreColor=v=>v<40?'var(--signal)':v<60?'var(--lime)':v<80?'var(--coral)':'var(--coral)';
+  const cards=[];
+  cards.push({lab:'DMS · maturità dato',val:S.dms===null?'—':S.dms+'/5',band:S.dms===null?'non valutato':(S.dms<2?'critica':S.dms>=4?'avanzata':'sufficiente'),cls:S.dms===null?'':(S.dms<2?'crit':S.dms>=4?'good':''),bar:S.dms===null?null:S.dms/5*100,barcol:S.dms<2?'var(--coral)':'var(--signal)'});
+  cards.push({lab:'MNS · necessità presenza',val:S.mns===null?'—':Math.round(S.mns)+'/100',band:S.mns===null?'non valutato':(S.mns<50?'presenza poco necessaria':S.mns<80?'parzialmente necessaria':'strutturalmente necessaria'),cls:'',bar:S.mns===null?null:S.mns,barcol:'var(--forest-soft)'});
+  cards.push({lab:'ACC · accessibilità',val:S.acc===null?'—':Math.round(S.acc)+'/100',band:S.acc===null?'non valutato':(S.acc<40?'critica':S.acc<60?'bassa':S.acc<80?'buona':'ottima'),cls:S.acc===null?'':(S.acc<40?'crit':S.acc>=60?'good':''),bar:S.acc===null?null:S.acc,barcol:S.acc>=60?'var(--signal)':'var(--coral)'});
+  cards.push({lab:'CDR · dipendenza auto',val:S.cdr===null?'—':Math.round(S.cdr)+'/100',band:S.cdr===null?'non valutato':(S.cdr<40?'bassa':S.cdr<60?'media':S.cdr<80?'alta':'critica'),cls:S.cdr===null?'':(S.cdr>=60?'crit':'good'),bar:S.cdr===null?null:S.cdr,barcol:S.cdr>=60?'var(--coral)':'var(--signal)'});
+  cards.push({lab:'GCS · governance',val:S.gcs===null?'—':S.gcs+'/5',band:S.gcs===null?'non valutato':(S.gcs>=4?'territoriale':'interno'),cls:'',bar:S.gcs===null?null:S.gcs/5*100,barcol:S.gcs>=4?'var(--coral)':'var(--forest-soft)'});
+  cards.push({lab:'Emissioni baseline',val:S.kpi?S.kpi.tco2.toFixed(1):'—',band:S.kpi?'tCO₂e / anno':'non calcolato',cls:'',bar:null,barcol:''});
+  const g=document.getElementById('rep-scores');g.innerHTML='';
+  cards.forEach(c=>{
+    const bar=c.bar===null?'':`<div class="rs-bar"><i style="width:${Math.max(0,Math.min(100,c.bar))}%;background:${c.barcol}"></i></div>`;
+    g.innerHTML+=`<div class="rep-score ${c.cls}"><div class="rs-lab">${c.lab}</div><div class="rs-val">${c.val}</div><div class="rs-band" style="color:var(--stone)">${c.band}</div>${bar}</div>`;
   });
+
+  // --- DIAGNOSI INEFFICIENZE ---
+  const ri=document.getElementById('rep-ineff');
+  const items=[];for(const k in S.ineff){if(S.ineff[k]!==null)items.push({code:k,val:S.ineff[k]});}
+  items.sort((a,b)=>b.val-a.val);
+  if(items.length===0){ri.innerHTML='<p class="empty">Compila gli indici del Canvas per generare la diagnosi.</p>';}
+  else{
+    const nm={I1:'Capacità sottoutilizzata',I2:'Duplicazione modale',I3:'Mismatch temporale',I4:'Frizione ultimo miglio',I5:'Domanda evitabile'};
+    const bandTxt=v=>v<=20?'assente':v<=40?'bassa':v<=60?'media':v<=80?'alta':'critica';
+    const bandCol=v=>v<=40?'var(--signal)':v<=60?'var(--lime)':'var(--coral)';
+    ri.innerHTML=items.map(it=>`<div class="rep-ineff-item">
+      <span class="ri-code">${it.code}</span>
+      <span class="ri-name">${nm[it.code]}</span>
+      <span class="ri-bar"><i style="width:${it.val}%;background:${bandCol(it.val)}"></i></span>
+      <span class="ri-val">${it.val} · ${bandTxt(it.val)}</span></div>`).join('');
+  }
+
+  // --- IPI ---
+  const ranked=interventions.filter(i=>i.ipi!=null&&i.cat!=='').sort((a,b)=>b.ipi-a.ipi);
+  const rip=document.getElementById('rep-ipi');
+  if(ranked.length===0){rip.innerHTML='<p class="empty">Nessun intervento valutato nella scheda IPI.</p>';}
+  else{
+    const pcol={A:'var(--signal)',B:'var(--lime)',C:'var(--stone-light)'};
+    rip.innerHTML=ranked.map((it,idx)=>{
+      const cls=it.ipi>12?'A':it.ipi>=6?'B':'C';
+      const nm=interventionCatalog[it.cat].label;
+      return `<div class="rep-ipi-row"><span class="rank">#${idx+1}</span><span class="rname">${nm}</span><span class="rnum">${it.ipi.toFixed(1)}</span><span class="prio ${cls}" style="-webkit-print-color-adjust:exact;print-color-adjust:exact">${cls}</span></div>`;
+    }).join('');
+  }
 }
+function printReport(){buildSummary();window.print();}
 function resetAll(){
   if(!confirm('Azzerare tutti i dati inseriti?'))return;
   document.querySelectorAll('input,select,textarea').forEach(e=>{if(e.id==='bl-gg'){e.value='220';}else{e.value='';}});
@@ -941,7 +1096,7 @@ buildModalRows();
 buildScoreRows('acc-rows',accVoci,calcACC);
 buildScoreRows('cdr-rows',cdrVoci,calcCDR);
 buildIneff();
-addIntervention();
+renderIPI();
 </script>
 </body>
 </html>
