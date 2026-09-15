@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circular Commuting Canvas — versione semplificata</title>
+<link rel="stylesheet" href="../assets/css/ccf.css">
+<style>
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(../assets/fonts/inter-var-latin.woff2) format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(../assets/fonts/jetbrains-mono-400.woff2) format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url(../assets/fonts/jetbrains-mono-700.woff2) format('woff2')}
+:root{
+  --paper:#F4F8F6;--paper-deep:#E6EDEA;--ink:#0B1F1A;--ink-soft:#1F3A33;
+  --stone:#7E948E;--stone-light:#C2D0CB;--signal:#00B26A;--signal-deep:#0E8C57;
+  --mint:#6EE7B7;--forest:#0F5E5A;--forest-deep:#073B38;--forest-soft:#1A7B76;
+  --lime:#C8FF6B;--sky:#2E8BFF;--sky-deep:#1A5FCF;--sky-soft:#BBE0FF;--ice:#E5F2EE;--coral:#FF7A59;
+  --font:'Inter','Helvetica Neue',Arial,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--mono)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--stone)}
+
+header{background:var(--ink);color:var(--paper);padding:56px 24px 52px;border-bottom:4px solid var(--signal)}
+.wrap{max-width:1100px;margin:0 auto}
+header h1{font-size:clamp(30px,5vw,52px);font-weight:800;letter-spacing:-.02em;line-height:1.05;margin-top:8px}
+header h1 .c{color:var(--signal)}
+header .sub{color:var(--stone-light);margin-top:22px;font-size:16px;line-height:1.55}
+header .author{margin-top:26px;font-family:var(--mono);font-size:12px;color:var(--mint)}
+
+nav{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:2px solid var(--ink);box-shadow:0 1px 0 var(--stone-light)}
+.tabs{max-width:1100px;margin:0 auto;display:flex;gap:0;flex-wrap:wrap}
+.tab{flex:1;min-width:110px;padding:14px 10px;background:none;border:none;border-right:1px solid var(--stone-light);
+  font-family:var(--mono);font-size:13px;cursor:pointer;color:var(--ink-soft);font-weight:500;transition:.15s;text-align:center}
+.tab:last-child{border-right:none}
+.tab:hover{background:var(--ice)}
+.tab.active{background:var(--ink);color:var(--paper)}
+.tab.active .dot{color:var(--signal)}
+
+main{max-width:1100px;margin:0 auto;padding:32px 24px 80px}
+.view{display:none}.view.active{display:block}
+h2.sec{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.lead{color:var(--ink-soft);max-width:760px;margin-bottom:28px;font-size:15px}
+
+.layer{border:2px solid var(--ink);border-radius:14px;margin-bottom:16px;overflow:hidden;background:#fff}
+.layer-head{padding:18px 20px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:.15s}
+.layer-head:hover{background:var(--ice)}
+.layer-num{font-family:var(--mono);font-size:13px;font-weight:700;background:var(--forest);color:var(--lime);
+  width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.layer-titles{flex:1}.layer-titles .t{font-size:18px;font-weight:700}
+.layer-titles .q{font-family:var(--mono);font-size:12px;color:var(--stone);margin-top:2px}
+.chev{font-size:18px;color:var(--stone);transition:.2s}
+.layer.open .chev{transform:rotate(90deg)}
+.layer-body{display:none;padding:0 20px 20px 82px;font-size:14.5px;color:var(--ink-soft)}
+.layer.open .layer-body{display:block}.layer-body p{margin-bottom:10px}
+.layer-body .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.pill{font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:999px;background:var(--ice);
+  border:1px solid var(--stone-light);color:var(--ink-soft)}
+.pill.sky{background:var(--sky-soft);border-color:var(--sky)}
+.pill.sig{background:var(--mint);border-color:var(--signal)}
+
+.block{border:2px solid var(--ink);border-radius:14px;margin-bottom:20px;background:#fff;overflow:hidden}
+.block-head{background:var(--forest-deep);color:var(--paper);padding:14px 20px;display:flex;align-items:center;gap:14px}
+.block-head .bn{font-family:var(--mono);font-weight:700;background:var(--signal);color:var(--ink);
+  width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.block-head .bt{font-weight:700;font-size:16px;flex:1}
+.block-head .bcode{font-family:var(--mono);font-size:12px;color:var(--lime)}
+.block-body{padding:20px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13.5px;font-weight:500;margin-bottom:5px;color:var(--ink-soft)}
+.field .hint{font-family:var(--mono);font-size:11px;color:var(--stone);font-weight:400}
+.field input[type=text],.field input[type=number],.field select,.field textarea{
+  width:100%;padding:9px 11px;border:1.5px solid var(--stone-light);border-radius:8px;font-family:var(--font);
+  font-size:14px;background:var(--paper);color:var(--ink);transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--signal);background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+
+.scorerow{display:grid;grid-template-columns:1fr;gap:6px;padding:11px 0;border-bottom:1px solid var(--ice)}
+.scorerow:last-child{border-bottom:none}
+.scorerow .lbl{font-size:13.5px;font-weight:500}
+.scorerow select{padding:8px 10px;border:1.5px solid var(--stone-light);border-radius:7px;font-family:var(--font);font-size:13.5px;background:var(--paper);width:100%}
+
+.scoreout{margin-top:16px;padding:16px 18px;border-radius:12px;background:var(--ink);color:var(--paper);
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.scoreout .val{font-family:var(--mono);font-size:34px;font-weight:800;line-height:1}
+.scoreout .val .u{font-size:15px;color:var(--stone-light)}
+.scoreout .band{flex:1;min-width:180px}
+.scoreout .band .name{font-weight:700;font-size:15px}
+.scoreout .band .name.crit{color:var(--coral)}
+.scoreout .band .name.good{color:var(--mint)}
+.scoreout .band .name.mid{color:var(--lime)}
+.scoreout .band .reco{font-size:12.5px;color:var(--stone-light);margin-top:3px;font-family:var(--mono)}
+.scoreout .bar{flex-basis:100%;height:8px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden;margin-top:4px}
+.scoreout .bar i{display:block;height:100%;background:var(--signal);transition:width .3s}
+.note{font-size:12.5px;color:var(--stone);font-style:italic;margin-top:12px;line-height:1.45}
+.warn{background:#FFF3EE;border:1.5px solid var(--coral);color:#8A3318;padding:10px 13px;border-radius:9px;
+  font-size:13px;margin-top:12px;display:none}
+.warn.show{display:block}
+.formula{font-family:var(--mono);font-size:12.5px;background:var(--ice);border-left:3px solid var(--signal);
+  padding:9px 13px;border-radius:0 8px 8px 0;margin:10px 0;color:var(--ink-soft)}
+
+/* CALCOLATORE BASELINE */
+.modalrow{display:grid;grid-template-columns:1.4fr 90px 110px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ice)}
+.modalrow .mname{font-size:13px}
+.modalrow .mfact{font-family:var(--mono);font-size:11px;color:var(--stone);text-align:right}
+.modalrow input{padding:7px;border:1.5px solid var(--stone-light);border-radius:7px;font-family:var(--mono);text-align:center;width:100%}
+@media(max-width:640px){.modalrow{grid-template-columns:1fr 70px 80px}}
+.kpibox{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:16px}
+.kpitile{border-radius:10px;padding:14px;text-align:center;background:var(--forest-deep);color:var(--paper)}
+.kpitile .k{font-family:var(--mono);font-size:11px;color:var(--mint);text-transform:uppercase}
+.kpitile .v{font-family:var(--mono);font-size:24px;font-weight:800;margin-top:4px}
+.kpitile .u{font-size:11px;color:var(--stone-light)}
+
+.diag-row{border:1.5px solid var(--stone-light);border-radius:11px;padding:13px 15px;margin-bottom:11px;background:#fff}
+.diag-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.diag-code{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--forest);flex-shrink:0}
+.diag-name{font-weight:600;font-size:14px;flex:1}
+.diag-badge{font-family:var(--mono);font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+.diag-badge.b1{background:#EAF7F0;color:var(--signal-deep)}
+.diag-badge.b2{background:#D8F0E4;color:var(--signal-deep)}
+.diag-badge.b3{background:#FFF3CC;color:#8a6d00}
+.diag-badge.b4{background:#FFE0D5;color:#8A3318}
+.diag-badge.b5{background:#FFCFC2;color:#8A3318}
+.diag-badge.na{background:var(--paper-deep);color:var(--stone)}
+.diag-why{font-size:12.5px;color:var(--ink-soft);line-height:1.45}
+.diag-why .src{font-family:var(--mono);font-size:11px;color:var(--stone)}
+.diag-override{margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--stone)}
+.diag-override select{padding:5px 8px;border:1.5px solid var(--stone-light);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--paper)}
+.diag-override input{flex:1;min-width:140px;padding:5px 8px;border:1.5px solid var(--stone-light);border-radius:6px;font-family:var(--font);font-size:12px}
+.diag-row.edited{border-color:var(--sky)}
+.diag-row.edited .diag-code::after{content:" ✎ corretto";font-size:10px;color:var(--sky-deep)}
+.diag-recall{border:2px solid var(--forest);border-radius:14px;background:var(--ice);padding:18px 20px;margin-bottom:24px}
+.diag-recall h3{font-size:15px;font-weight:700;color:var(--forest-deep);margin-bottom:4px}
+.diag-recall .sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px}
+.dr-list{display:flex;flex-direction:column;gap:9px}
+.dr-item{display:flex;align-items:flex-start;gap:11px;background:#fff;border:1.5px solid var(--stone-light);border-radius:10px;padding:11px 13px}
+.dr-badge{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.dr-badge.b4{background:#FFE0D5;color:#8A3318}.dr-badge.b5{background:#FFCFC2;color:#8A3318}
+.dr-badge.b3{background:#FFF3CC;color:#8a6d00}
+.dr-body{flex:1;min-width:0}
+.dr-body .dn{font-weight:600;font-size:13.5px}
+.dr-body .di{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+.dr-add{background:var(--forest);color:var(--lime);border:none;padding:7px 13px;border-radius:8px;font-family:var(--mono);font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;align-self:center;transition:.15s}
+.dr-add:hover{background:var(--forest-deep)}
+.dr-add.done{background:var(--signal);color:var(--ink);pointer-events:none}
+.dr-empty{font-size:13px;color:var(--ink-soft);font-style:italic}
+.dr-allbtn{margin-top:14px;background:var(--signal);color:var(--ink);border:none;padding:10px 16px;border-radius:9px;font-family:var(--mono);font-size:12.5px;font-weight:700;cursor:pointer}
+.dr-allbtn:hover{background:var(--signal-deep);color:#fff}
+.ipi-explain{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+@media(max-width:640px){.ipi-explain{grid-template-columns:1fr}}
+.ie-item{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--stone-light);border-radius:12px;padding:14px;background:#fff;font-size:13px;color:var(--ink-soft);line-height:1.45}
+.ie-ico{flex-shrink:0;width:28px;height:28px;border-radius:8px;color:#fff;font-family:var(--mono);font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center}
+
+.intv{border:2px solid var(--ink);border-radius:14px;padding:0;margin-bottom:20px;background:#fff;overflow:hidden}
+.intv .ihead{display:flex;gap:10px;align-items:center;padding:14px 16px;background:var(--ice)}
+.intv .ihead select{flex:1;padding:10px 12px;border:1.5px solid var(--ink);border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;background:#fff}
+.intv .ihead .rm{background:none;border:none;color:var(--coral);cursor:pointer;font-size:24px;font-weight:700;padding:0 6px;line-height:1}
+.intv .imeta{font-family:var(--mono);font-size:11px;color:var(--stone);padding:8px 16px 0}
+.intv .qbody{padding:8px 16px 16px}
+.qcard{padding:14px 0;border-bottom:1px solid var(--ice)}
+.qcard:last-child{border-bottom:none}
+.qcard .q-num{font-family:var(--mono);font-size:11px;color:var(--signal-deep);font-weight:700}
+.qcard .q-txt{font-size:14.5px;font-weight:600;margin:2px 0 4px}
+.qcard .q-sub{font-size:12px;color:var(--stone);margin-bottom:9px}
+.qcard select{width:100%;padding:10px 12px;border:1.5px solid var(--stone-light);border-radius:8px;font-family:var(--font);font-size:13.5px;background:var(--paper)}
+.qcard select:focus{outline:none;border-color:var(--signal);background:#fff}
+.qcard.denom .q-num{color:var(--coral)}
+.tagdir{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.tagdir.up{background:var(--mint);color:var(--ink)}
+.tagdir.down{background:#FFE0D5;color:#8A3318}
+.ipiout{display:flex;align-items:center;gap:14px;margin:14px 16px 16px;padding:14px 16px;border-radius:10px;background:var(--ink);color:var(--paper);flex-wrap:wrap}
+.ipiout .num{font-family:var(--mono);font-size:28px;font-weight:800}
+.ipiout .verdict{flex:1;min-width:160px;font-size:13px;color:var(--stone-light)}
+.ipiout .verdict b{color:var(--paper)}
+.prio{font-family:var(--mono);font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px}
+.prio.A{background:var(--signal);color:var(--ink)}
+.prio.B{background:var(--lime);color:var(--ink)}
+.prio.C{background:var(--stone-light);color:var(--ink-soft)}
+.addbtn{background:var(--sky);color:#fff;border:none;padding:11px 18px;border-radius:9px;font-family:var(--mono);
+  font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.addbtn:hover{background:var(--sky-deep)}
+
+.sumcard{border:2px solid var(--ink);border-radius:14px;padding:22px;background:#fff;margin-bottom:18px}
+.sumgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:14px}
+.sumtile{border:1.5px solid var(--stone-light);border-radius:10px;padding:13px;text-align:center;background:var(--paper)}
+.sumtile .lab{font-family:var(--mono);font-size:11px;color:var(--stone);text-transform:uppercase;letter-spacing:.05em}
+.sumtile .v{font-family:var(--mono);font-size:26px;font-weight:800;margin-top:4px}
+.sumtile .b{font-size:11.5px;margin-top:2px;font-weight:600}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.btn{padding:11px 20px;border-radius:9px;font-family:var(--mono);font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--ink);transition:.15s}
+.btn.primary{background:var(--ink);color:var(--paper)}.btn.primary:hover{background:var(--forest)}
+.btn.ghost{background:none;color:var(--ink)}.btn.ghost:hover{background:var(--ice)}
+.empty{color:var(--stone);font-size:14px;font-style:italic}
+
+/* LEGENDA */
+.legtable{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13.5px}
+.legtable th{text-align:left;padding:10px 12px;background:var(--forest-deep);color:var(--paper);font-family:var(--mono);font-size:12px;font-weight:600}
+.legtable th:first-child{border-radius:8px 0 0 0}.legtable th:last-child{border-radius:0 8px 0 0}
+.legtable td{padding:10px 12px;border-bottom:1px solid var(--ice);vertical-align:top}
+.legtable tr:last-child td{border-bottom:none}
+.legtable .code{font-family:var(--mono);font-weight:700;color:var(--forest);white-space:nowrap}
+.legtable .scale{font-family:var(--mono);font-size:12px;color:var(--stone);white-space:nowrap}
+.legcard{border:2px solid var(--ink);border-radius:14px;overflow:hidden;margin-bottom:24px;background:#fff}
+.legcard h3{background:var(--ink);color:var(--paper);padding:13px 18px;font-size:15px;font-weight:700}
+.legcard .lc-body{padding:4px 18px 8px}
+.bandlegend{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.bandchip{font-family:var(--mono);font-size:12px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--stone-light)}
+.bandchip.b1{background:#EAF7F0}.bandchip.b2{background:#D8F0E4}.bandchip.b3{background:#FFF3CC}
+.bandchip.b4{background:#FFE0D5}.bandchip.b5{background:#FFCFC2}
+
+footer{text-align:center;padding:30px;color:var(--stone);font-family:var(--mono);font-size:12px;border-top:1px solid var(--stone-light)}
+footer a{color:var(--signal-deep);font-weight:600;text-decoration:none;border-bottom:1px solid var(--stone-light);transition:.15s}
+footer a:hover{color:var(--forest);border-bottom-color:var(--signal)}
+/* ===== REPORT (vista Sintesi) ===== */
+#report{border:2px solid var(--ink);border-radius:16px;overflow:hidden;background:#fff}
+.rep-head{background:var(--ink);color:var(--paper);padding:26px 28px}
+.rep-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mint)}
+.rep-title{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-top:10px;line-height:1.1}
+.rep-date{font-family:var(--mono);font-size:12px;color:var(--stone-light);margin-top:8px}
+.rep-section{padding:22px 28px;border-bottom:1px solid var(--paper-deep)}
+.rep-section:last-of-type{border-bottom:none}
+.rep-h{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--forest);font-weight:700;margin-bottom:16px}
+.rep-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:640px){.rep-scores{grid-template-columns:1fr 1fr}}
+.rep-score{border:1.5px solid var(--stone-light);border-radius:11px;padding:13px 14px}
+.rep-score .rs-lab{font-family:var(--mono);font-size:11px;color:var(--stone);text-transform:uppercase;letter-spacing:.04em}
+.rep-score .rs-val{font-family:var(--mono);font-size:28px;font-weight:800;line-height:1.1;margin:3px 0 5px}
+.rep-score .rs-band{font-size:12px;font-weight:600}
+.rep-score .rs-bar{height:6px;border-radius:3px;background:var(--paper-deep);overflow:hidden;margin-top:7px}
+.rep-score .rs-bar i{display:block;height:100%}
+.rep-score.crit .rs-val{color:var(--coral)}
+.rep-score.good .rs-val{color:var(--signal-deep)}
+.rep-ineff-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--paper-deep)}
+.rep-ineff-item:last-child{border-bottom:none}
+.rep-ineff-item .ri-code{font-family:var(--mono);font-weight:700;color:var(--forest);width:34px;flex-shrink:0}
+.rep-ineff-item .ri-bar{flex:1;height:14px;border-radius:7px;background:var(--paper-deep);overflow:hidden;position:relative;min-width:80px}
+.rep-ineff-item .ri-bar i{display:block;height:100%;border-radius:7px}
+.rep-ineff-item .ri-name{flex:1.4;font-size:13px;min-width:0}
+.rep-ineff-item .ri-val{font-family:var(--mono);font-weight:700;font-size:13px;width:62px;text-align:right;flex-shrink:0}
+.rep-ipi-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--paper-deep)}
+.rep-ipi-row:last-child{border-bottom:none}
+.rep-ipi-row .rank{font-family:var(--mono);color:var(--stone);font-size:13px;width:26px;flex-shrink:0}
+.rep-ipi-row .rname{flex:1;font-size:13.5px;font-weight:600}
+.rep-ipi-row .rnum{font-family:var(--mono);font-weight:800;font-size:17px}
+.rep-foot{padding:18px 28px;background:var(--paper);font-family:var(--mono);font-size:11px;color:var(--stone);text-align:center;line-height:1.5}
+.no-print{}
+
+/* ===== MOBILE ===== */
+@media(max-width:760px){
+  header{padding:34px 18px 30px}
+  header h1{font-size:30px}
+  header .sub{font-size:14px;margin-top:16px}
+  nav{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tabs{flex-wrap:nowrap;min-width:max-content}
+  .tab{flex:0 0 auto;min-width:auto;padding:13px 16px;font-size:13px}
+  main{padding:24px 16px 64px}
+  h2.sec{font-size:23px}
+  .lead{font-size:14px;margin-bottom:22px}
+  .layer-head{padding:15px 15px;gap:12px}
+  .layer-num{width:40px;height:40px}
+  .layer-titles .t{font-size:16px}
+  .layer-body{padding:0 15px 18px 15px}
+  .block-body{padding:16px}
+  .block-head{padding:13px 15px}
+  .block-head .bt{font-size:15px}
+  .formula{font-size:11.5px;padding:8px 11px;overflow-x:auto}
+  .scorerow select{font-size:16px;padding:10px}
+  .modalrow{grid-template-columns:1fr;gap:6px;padding:12px 0}
+  .modalrow .mfact{text-align:left}
+  .modalrow input{text-align:left;font-size:16px}
+  .modalrow > div:last-child{font-size:11px}
+  .kpibox{grid-template-columns:1fr 1fr}
+  .diag-override{flex-direction:column;align-items:stretch;gap:6px}
+  .diag-override input,.diag-override select{width:100%}
+  .diag-badge{font-size:11px}
+  .ipi-explain{grid-template-columns:1fr}
+  .intv .ihead{flex-wrap:wrap}
+  .intv .ihead select{font-size:14px;min-width:0}
+  .dr-item{flex-wrap:wrap}
+  .dr-add{width:100%;align-self:stretch;padding:9px}
+  .field input,.field select,.field textarea,.qcard select{font-size:16px}
+  .rep-head{padding:20px 18px}
+  .rep-title{font-size:20px}
+  .rep-section{padding:18px}
+  .rep-foot{padding:16px 18px}
+  .actions{flex-direction:column}
+  .btn{width:100%;text-align:center}
+  .legcard .lc-body{overflow-x:visible}
+  .legtable{min-width:0;display:block}
+  .legtable tr:first-child{display:none}
+  .legtable tr{display:block;border:1.5px solid var(--stone-light);border-radius:10px;padding:11px 13px;margin-bottom:10px;background:var(--paper)}
+  .legtable td{display:block;border:none;padding:2px 0;font-size:13.5px;color:var(--ink-soft)}
+  .legtable td:first-child{font-weight:700;color:var(--ink);font-size:14.5px;margin-bottom:3px}
+  .legtable td.code:first-child{font-family:var(--mono);color:var(--forest)}
+  .legtable td.scale:not(:first-child){font-family:var(--mono);font-size:12px;color:var(--stone)}
+  .bandlegend{gap:6px}
+  .bandchip{font-size:11.5px;padding:5px 9px}
+}
+@media(max-width:420px){
+  .kpibox{grid-template-columns:1fr}
+  .rep-scores{grid-template-columns:1fr 1fr}
+  header h1{font-size:26px}
+}
+
+/* ===== STAMPA: solo il report ===== */
+@media print{
+  @page{margin:14mm}
+  body{background:#fff}
+  nav,header,footer,.no-print,#view-ccf,#view-canvas,#view-ipi,#view-leg{display:none!important}
+  main{padding:0;max-width:none}
+  #view-sum{display:block!important}
+  #view-sum>h2,#view-sum>.lead{display:none}
+  #report{border:none;border-radius:0}
+  .rep-head{background:#0B1F1A!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rep-score,.rep-ineff-item .ri-bar,.rep-ineff-item .ri-bar i,.rep-score .rs-bar i,.prio{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rep-section{break-inside:avoid}
+}
+
+/* ===== BANNER BETA 2.0 ===== */
+.beta-banner{background:var(--ice);border-bottom:1px solid var(--stone-light);padding:12px 24px}
+.beta-banner-in{display:flex;align-items:center;justify-content:space-between;gap:12px 22px;flex-wrap:wrap}
+.beta-banner p{flex:1;min-width:240px;font-size:14px;line-height:1.45;color:var(--ink-soft)}
+.beta-banner strong{color:var(--ink)}
+.beta-new{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--signal-deep);margin-right:4px}
+.wave-btn{position:relative;isolation:isolate;overflow:hidden;display:inline-block;padding:10px 22px;border-radius:999px;color:#fff;
+  font-family:var(--mono);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;
+  background:linear-gradient(115deg,#073B38 0%,#0F5E5A 22%,#1A5FCF 45%,#1A7B76 68%,#0B7550 85%,#073B38 100%);
+  background-size:320% 100%;animation:ccWave 16s ease-in-out infinite alternate;box-shadow:0 2px 10px rgba(7,59,56,.25)}
+.wave-btn::after{content:"";position:absolute;inset:-40%;z-index:-1;
+  background:radial-gradient(40% 60% at 30% 50%,rgba(46,139,255,.28),transparent 70%),radial-gradient(35% 55% at 72% 50%,rgba(0,178,106,.22),transparent 70%);
+  animation:ccSwell 11s ease-in-out infinite alternate}
+.wave-btn:hover{filter:brightness(1.1)}
+.wave-btn:focus-visible{outline:3px solid var(--signal);outline-offset:3px}
+@keyframes ccWave{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes ccSwell{0%{transform:translate(-12%,4%) scale(1)}100%{transform:translate(12%,-4%) scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.wave-btn,.wave-btn::after{animation:none}}
+@media(max-width:760px){.beta-banner{padding:12px 16px}.wave-btn{width:100%;text-align:center}}
+@media print{.beta-banner{display:none!important}}
+
+/* ===== RESTYLING 2026: design system condiviso (assets/css/ccf.css), contenuti e calcoli invariati ===== */
+:root{
+  --paper:#FAFAFA;--paper-deep:#ECEFF2;--ink:#1D2130;--ink-soft:#383F5D;
+  --stone:#6B7280;--stone-light:#DDE2EA;--signal:#586CC9;--signal-deep:#3F51A8;
+  --mint:#D6E6FF;--forest:#383F5D;--forest-deep:#1D2130;--forest-soft:#586CC9;
+  --lime:#D6E6FF;--sky:#586CC9;--sky-deep:#3F51A8;--sky-soft:#D6E6FF;--ice:#EEF4FF;--coral:#E8604C;
+  --font:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+body{font-feature-settings:"ss01","cv11"}
+header{border-bottom:3px solid var(--signal)}
+header h1,h2.sec{font-weight:300;letter-spacing:-.022em}
+header h1{color:var(--paper)}
+header h1 .c{color:var(--mint)}
+.home-link{display:inline-flex;align-items:center;gap:8px;font-family:var(--font);font-size:13px;color:var(--mint);text-decoration:none;margin-bottom:18px}
+.home-link:hover{text-decoration:underline}
+nav{border-bottom:1px solid var(--stone-light);box-shadow:none}
+.tab{font-family:var(--font);font-weight:500}
+.layer,.block,.intv,.sumcard,.legcard,#report{border:1px solid var(--stone-light);box-shadow:0 1px 3px rgba(0,0,0,.05),0 10px 40px rgba(0,0,0,.02)}
+.layer-titles .t,.block-head .bt{font-weight:500}
+.block-head .bn{color:#fff}
+/* caselle KPI allineate anche quando le etichette vanno a capo */
+.kpibox{align-items:stretch}
+.kpitile{display:flex;flex-direction:column;align-items:center}
+.kpitile .k{min-height:2.8em;display:flex;align-items:flex-end;justify-content:center;line-height:1.3}
+.btn{border-width:1px;font-family:var(--font)}
+.qcard select,.field input,.field select,.field textarea,.scorerow select{border-width:1px;background:#fff}
+.beta-banner{background:var(--ice);border-bottom:1px solid var(--stone-light)}
+.beta-new{font-family:var(--font);color:var(--signal-deep)}
+.wave-btn{font-family:var(--font);background:linear-gradient(115deg,#1D2130 0%,#383F5D 22%,#3F51A8 45%,#0F766E 70%,#586CC9 86%,#1D2130 100%);background-size:320% 100%}
+.wave-btn::after{background:radial-gradient(40% 60% at 30% 50%,rgba(214,230,255,.22),transparent 70%),radial-gradient(35% 55% at 72% 50%,rgba(20,184,166,.18),transparent 70%)}
+.help-eyebrow{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--signal)}
+@media print{.help-fab,.help-drawer{display:none!important}}
+</style>
+</head>
+<body>
+
+<div class="beta-banner" role="region" aria-label="Circular Commuting 2.0 beta">
+  <div class="wrap beta-banner-in">
+    <p><span class="beta-new">NUOVO ·</span> <strong>Circular Commuting 2.0 beta:</strong> stiamo validando il framework con i mobility manager. Analizza la tua sede e ricevi il report.</p>
+    <a class="wave-btn" href="../beta/">Prova la beta →</a>
+  </div>
+</div>
+
+<header>
+  <div class="wrap">
+    <a class="home-link" href="../">← circularcommuting.it</a>
+    <h1>Circular Commuting <span class="c">:</span><br>Framework &amp; Canvas</h1>
+    <p class="sub">Diagnosi energy-aware della mobilità casa-lavoro e prioritizzazione degli interventi.</p>
+  </div>
+</header>
+
+<nav>
+  <div class="tabs">
+    <button class="tab active" data-view="ccf"><span class="dot">▸</span> Framework</button>
+    <button class="tab" data-view="canvas"><span class="dot">▸</span> Canvas</button>
+    <button class="tab" data-view="ipi"><span class="dot">▸</span> IPI</button>
+    <button class="tab" data-view="sum"><span class="dot">▸</span> Sintesi</button>
+    <button class="tab" data-view="leg"><span class="dot">▸</span> Legenda</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- VIEW 1: FRAMEWORK -->
+<section class="view active" id="view-ccf">
+  <h2 class="sec">Il Circular Commuting Framework</h2>
+  <p class="lead">Struttura analitica a cinque <em>layer</em> che collega dati, diagnosi delle inefficienze, misurazione energetica, selezione degli interventi e governance. Clicca su ciascun livello per espanderlo.</p>
+  <div class="layer" id="L1"><div class="layer-head"><div class="layer-num">L1</div><div class="layer-titles"><div class="t">Data Layer</div><div class="q">Ho dati sufficienti?</div></div><div class="chev">›</div></div>
+    <div class="layer-body"><p>Stabilisce il perimetro e la maturità informativa. Il <strong>Data Maturity Score (DMS, 0–5)</strong> funziona da vincolo abilitante: con DMS &lt; 2 la baseline non è affidabile e la raccolta dati diventa la prima priorità.</p>
+    <div class="meta"><span class="pill sig">DMS 0–5</span><span class="pill">Matrice O/D</span><span class="pill">Modal split</span><span class="pill">Distanza media</span></div></div></div>
+  <div class="layer" id="L2"><div class="layer-head"><div class="layer-num">L2</div><div class="layer-titles"><div class="t">Inefficiency Layer</div><div class="q">Dove si genera l'inefficienza?</div></div><div class="chev">›</div></div>
+    <div class="layer-body"><p>Applica la tassonomia delle cinque inefficienze circolari: <strong>I1</strong> capacità sottoutilizzata, <strong>I2</strong> duplicazione modale, <strong>I3</strong> mismatch temporale, <strong>I4</strong> frizione di ultimo miglio, <strong>I5</strong> domanda evitabile. Gli score MNS, ACC e CDR qualificano le condizioni che le generano.</p>
+    <div class="meta"><span class="pill">I1–I5</span><span class="pill sky">MNS</span><span class="pill sky">ACC</span><span class="pill sky">CDR</span></div></div></div>
+  <div class="layer" id="L3"><div class="layer-head"><div class="layer-num">L3</div><div class="layer-titles"><div class="t">Energy Performance Layer</div><div class="q">Quanto pesa l'inefficienza?</div></div><div class="chev">›</div></div>
+    <div class="layer-body"><p>Quantifica le performance energetico-emissive <em>well-to-wheel</em>. KPI centrale: <strong>intensità energetica (kWh/pax-km)</strong>, affiancata da <strong>intensità emissiva (gCO₂e/pax-km)</strong> — aggancio allo Scope 3 cat. 7 — e dal <strong>load factor</strong>. I valori sono stimati dal Canvas a partire dai fattori per modalità (Tab. 2.1).</p>
+    <div class="meta"><span class="pill sig">kWh/pax-km</span><span class="pill">gCO₂e/pax-km</span><span class="pill">tCO₂e annue</span><span class="pill">Load factor</span></div></div></div>
+  <div class="layer" id="L4"><div class="layer-head"><div class="layer-num">L4</div><div class="layer-titles"><div class="t">Intervention Matching Layer</div><div class="q">Quale intervento è coerente?</div></div><div class="chev">›</div></div>
+    <div class="layer-body"><p>Collega ogni inefficienza prevalente agli interventi coerenti tramite la matrice inefficienza/intervento (Tab. 5.5). Vincolo centrale: nessun intervento è proposto se non è collegato a un'inefficienza diagnosticata.</p>
+    <div class="meta"><span class="pill">I1 → load factor / carpooling</span><span class="pill">I2 → servizi condivisi / coalizione</span><span class="pill">I3 → microtransit / TPL</span><span class="pill">I4 → shuttle / e-bike</span><span class="pill">I5 → smart working / coworking</span></div></div></div>
+  <div class="layer" id="L5"><div class="layer-head"><div class="layer-num">L5</div><div class="layer-titles"><div class="t">Governance &amp; Feedback Layer</div><div class="q">L'intervento è attuabile e monitorabile?</div></div><div class="chev">›</div></div>
+    <div class="layer-body"><p>Valuta la complessità con il <strong>GCS (1–5)</strong> e ordina gli interventi con l'<strong>IPI</strong> in classi A/B/C. Con GCS ≥ 4 serve un piano di governance esplicito. Chiude col feedback loop, idealmente sulle scadenze del PSCL.</p>
+    <div class="meta"><span class="pill sig">GCS 1–5</span><span class="pill sky">IPI</span><span class="pill">Priorità A/B/C</span><span class="pill">Feedback loop</span></div></div></div>
+</section>
+
+<!-- VIEW 2: CANVAS -->
+<section class="view" id="view-canvas">
+  <h2 class="sec">Il Circular Commuting Canvas</h2>
+  <p class="lead">Otto blocchi sequenziali: ogni blocco produce uno score che alimenta il successivo. Gli score si calcolano automaticamente. La ponderazione delle voci è uniforme (scelta di prima applicazione).</p>
+
+  <div class="block"><div class="block-head"><div class="bn">1</div><div class="bt">Profilo Organizzativo e Maturità del Dato</div><div class="bcode">DMS</div></div>
+    <div class="block-body">
+      <div class="grid2">
+        <div class="field"><label>Organizzazione</label><input type="text" id="org"></div>
+        <div class="field"><label>Sede analizzata</label><input type="text" id="sede"></div>
+        <div class="field"><label>N. dipendenti sede</label><input type="number" id="ndip" min="0"></div>
+        <div class="field"><label>% dipendenti su turni</label><input type="number" id="pturni" min="0" max="100"></div>
+      </div>
+      <div class="field"><label>Data Maturity Score</label>
+        <select id="dms" onchange="calcDMS()">
+          <option value="">— seleziona —</option>
+          <option value="0">DMS 0 · nessun dato strutturato</option>
+          <option value="1">DMS 1 · questionario base / dati generici</option>
+          <option value="2">DMS 2 · dati O/D aggregati</option>
+          <option value="3">DMS 3 · O/D + turni + modalità</option>
+          <option value="4">DMS 4 · integrati con TPL, GIS, accessibilità</option>
+          <option value="5">DMS 5 · monitoraggio periodico / dashboard</option>
+        </select></div>
+      <div class="scoreout" id="out-dms" style="display:none"><div class="val" id="dms-val">–<span class="u">/5</span></div><div class="band"><div class="name" id="dms-name">—</div><div class="reco" id="dms-reco"></div></div></div>
+      <div class="warn" id="dms-warn">⚠ DMS &lt; 2 → la raccolta dati è la prima priorità. Gli interventi data-intensive non potranno avere Data Readiness &gt; 2 nel calcolo IPI.</div>
+    </div></div>
+
+  <div class="block"><div class="block-head"><div class="bn">2</div><div class="bt">Necessità Reale di Presenza</div><div class="bcode">MNS</div></div>
+    <div class="block-body">
+      <div class="formula">MNS = {[(Qe × 5) + (Qp × 3) + (Qr × 1)] − 100} / 4 · le tre quote % devono sommare 100</div>
+      <div class="grid3">
+        <div class="field"><label>% presenza fisica essenziale <span class="hint">(Qe, peso 5)</span></label><input type="number" id="qe" min="0" max="100" oninput="calcMNS()"></div>
+        <div class="field"><label>% parzialmente remotizzabile <span class="hint">(Qp, peso 3)</span></label><input type="number" id="qp" min="0" max="100" oninput="calcMNS()"></div>
+        <div class="field"><label>% completamente remotizzabile <span class="hint">(Qr, peso 1)</span></label><input type="number" id="qr" min="0" max="100" oninput="calcMNS()"></div>
+      </div>
+      <div class="warn" id="mns-warn">⚠ Le tre quote devono sommare esattamente 100%. Somma attuale: <b id="mns-sum">0</b>%.</div>
+      <div class="scoreout" id="out-mns" style="display:none"><div class="val" id="mns-val">–<span class="u">/100</span></div><div class="band"><div class="name" id="mns-name">—</div><div class="reco" id="mns-reco"></div></div><div class="bar"><i id="mns-bar" style="width:0"></i></div></div>
+      <p class="note">La classificazione delle mansioni va validata con HR, responsabili operativi e direzione.</p>
+    </div></div>
+
+  <div class="block"><div class="block-head"><div class="bn">3</div><div class="bt">Baseline Commuting — calcolatore energetico-emissivo</div><div class="bcode">kWh · gCO₂e · tCO₂e</div></div>
+    <div class="block-body">
+      <div class="grid3">
+        <div class="field"><label>Distanza media casa-lavoro — sola andata (km)</label><input type="number" id="bl-dist" min="0" step="0.1" oninput="calcBaseline()"></div>
+        <div class="field"><label>Giorni di presenza / anno</label><input type="number" id="bl-gg" min="0" max="365" value="220" oninput="calcBaseline()"></div>
+        <div class="field"><label>N. dipendenti nel perimetro</label><input type="number" id="bl-n" min="0" oninput="calcBaseline()"></div>
+      </div>
+      <p class="note" style="margin-top:4px;margin-bottom:10px">Inserisci la <b>ripartizione modale</b> (n. dipendenti per modalità). I fattori energetici/emissivi WTW sono quelli della Tabella 2.1; CO₂ e KPI sono stimati automaticamente — non vanno compilati a mano.</p>
+      <div style="display:grid;grid-template-columns:1.4fr 90px 110px;gap:10px;padding:0 0 4px;font-family:var(--mono);font-size:10.5px;color:var(--stone);text-transform:uppercase">
+        <div>Modalità · fattore medio WTW</div><div style="text-align:center">n. dip.</div><div style="text-align:center">gCO₂e/pax-km</div>
+      </div>
+      <div id="modal-rows"></div>
+      <div class="warn" id="bl-warn" style="display:block;background:var(--ice);border-color:var(--stone-light);color:var(--ink-soft)">Somma dipendenti per modalità: <b id="bl-sum">0</b> <span id="bl-check"></span></div>
+      <div class="kpibox" id="bl-kpi" style="display:none">
+        <div class="kpitile"><div class="k">Intensità energetica</div><div class="v" id="kpi-kwh">–</div><div class="u">kWh/pax-km (media)</div></div>
+        <div class="kpitile"><div class="k">Intensità emissiva</div><div class="v" id="kpi-gco2">–</div><div class="u">gCO₂e/pax-km (media)</div></div>
+        <div class="kpitile"><div class="k">Emissioni annue</div><div class="v" id="kpi-tco2">–</div><div class="u">tCO₂e / anno</div></div>
+        <div class="kpitile"><div class="k">Pax-km annui</div><div class="v" id="kpi-paxkm">–</div><div class="u">milioni pax-km</div></div>
+      </div>
+      <p class="note">tCO₂e = Σ [(Nₘ × Dₘ×2 × Gₘ × EFₘ) / 1.000.000]. I fattori per modalità sono il punto medio degli intervalli WTW; calibrazione su flotta reale richiede i dati tecnici dell'operatore (App. A).</p>
+    </div></div>
+
+  <div class="block"><div class="block-head"><div class="bn">4</div><div class="bt">Accessibilità Alternativa</div><div class="bcode">ACC</div></div>
+    <div class="block-body">
+      <div class="formula">ACC = [(media dei 7 punteggi − 1) / 4] × 100 · più alto = migliore accessibilità</div>
+      <div id="acc-rows"></div>
+      <div class="scoreout" id="out-acc" style="display:none"><div class="val" id="acc-val">–<span class="u">/100</span></div><div class="band"><div class="name" id="acc-name">—</div><div class="reco" id="acc-reco"></div></div><div class="bar"><i id="acc-bar" style="width:0"></i></div></div>
+    </div></div>
+
+  <div class="block"><div class="block-head"><div class="bn">5</div><div class="bt">Dipendenza dall'Auto</div><div class="bcode">CDR</div></div>
+    <div class="block-body">
+      <div class="formula">CDR = [(media dei 5 punteggi − 1) / 4] × 100 · score negativo: più alto = maggiore dipendenza</div>
+      <div id="cdr-rows"></div>
+      <div class="scoreout" id="out-cdr" style="display:none"><div class="val" id="cdr-val">–<span class="u">/100</span></div><div class="band"><div class="name" id="cdr-name">—</div><div class="reco" id="cdr-reco"></div></div><div class="bar"><i id="cdr-bar" style="width:0"></i></div></div>
+      <p class="note">Lettura congiunta: ACC alta + CDR bassa → leve immediate di shift modale; ACC bassa + CDR alta → prima interventi infrastrutturali o di governance territoriale.</p>
+    </div></div>
+
+  <div class="block"><div class="block-head"><div class="bn">6</div><div class="bt">Inefficienze Circolari I1–I5 — diagnosi</div><div class="bcode">derivate dagli indici</div></div>
+    <div class="block-body">
+      <p class="note" style="margin-top:0;margin-bottom:6px">Le inefficienze <b>non si compilano da zero</b>: sono la <b>diagnosi</b> che nasce dagli indici già inseriti sopra. Gli <i>indici</i> (ACC, CDR, MNS) descrivono <i>com'è</i> il contesto; le <i>inefficienze</i> dicono <i>dove si genera lo spreco</i>. Lo strumento le calcola dai tuoi dati e mostra il nesso. Se non sei d'accordo con un valore, puoi correggerlo a mano dichiarando il motivo.</p>
+      <div class="warn" id="ineff-empty" style="display:block;background:var(--ice);border-color:var(--stone-light);color:var(--ink-soft)">Compila prima gli indici (blocchi 3, 4, 5 e MNS) per generare la diagnosi. I2 e gli aspetti non desumibili dagli indici restano da valutare a mano.</div>
+      <div id="ineff-rows"></div>
+      <div class="scoreout" id="out-ineff" style="display:none;background:var(--forest-deep)"><div class="band" style="flex-basis:100%"><div class="name">Inefficienza prevalente: <span id="ineff-top" style="color:var(--lime)">—</span></div><div class="reco" id="ineff-reco"></div></div></div>
+    </div></div>
+
+  <div class="block"><div class="block-head"><div class="bn">7</div><div class="bt">Governance &amp; Complessità Attuativa</div><div class="bcode">GCS</div></div>
+    <div class="block-body">
+      <div class="field"><label>Governance Complexity Score — complessità di contesto</label>
+        <select id="gcs" onchange="calcGCS()">
+          <option value="">— seleziona —</option>
+          <option value="1">GCS 1 · interno semplice (comunicazione, incentivi)</option>
+          <option value="2">GCS 2 · interno multi-funzione (smart working, policy parcheggi)</option>
+          <option value="3">GCS 3 · con fornitori esterni (navetta, carpooling, bike service)</option>
+          <option value="4">GCS 4 · con attori pubblici / TPL (fermate, orari, accordi Comune)</option>
+          <option value="5">GCS 5 · coalizione multi-attore (più aziende, Comune, TPL, MM d'area)</option>
+        </select></div>
+      <div class="scoreout" id="out-gcs" style="display:none"><div class="val" id="gcs-val">–<span class="u">/5</span></div><div class="band"><div class="name" id="gcs-name">—</div><div class="reco" id="gcs-reco"></div></div></div>
+      <div class="warn" id="gcs-warn">⚠ GCS ≥ 4 → serve un piano di governance esplicito. In assenza di un attore territoriale attivabile, l'intervento è strategico ma non immediatamente implementabile.</div>
+    </div></div>
+
+  <div class="block"><div class="block-head"><div class="bn">8</div><div class="bt">Priorità di Intervento</div><div class="bcode">IPI</div></div>
+    <div class="block-body"><p style="font-size:14.5px;color:var(--ink-soft)">Il blocco 8 ordina gli interventi candidati tramite l'Intervention Priority Index, classificandoli in A / B / C.</p>
+    <button class="btn primary" style="margin-top:14px" onclick="switchView('ipi')">Vai al calcolatore IPI →</button></div></div>
+</section>
+
+<!-- VIEW 3: IPI -->
+<section class="view" id="view-ipi">
+  <h2 class="sec">Prioritizzazione degli interventi</h2>
+  <p class="lead">Quando hai più interventi possibili, quale fai per primo? Questo strumento li mette in ordine combinando <b>quanto rende</b> un intervento e <b>quanto è facile farlo</b>. Per ogni intervento rispondi a 5 domande scegliendo la frase che descrive meglio la tua situazione: il punteggio di priorità si calcola da solo.</p>
+
+  <div class="ipi-explain">
+    <div class="ie-item"><div class="ie-ico" style="background:var(--signal)">+</div><div><b>Tre cose che aumentano la priorità</b><br>più l'intervento riduce consumi/emissioni, più i dati sono solidi, più le persone lo accettano → priorità più alta.</div></div>
+    <div class="ie-item"><div class="ie-ico" style="background:var(--coral)">−</div><div><b>Due cose che la abbassano</b><br>più costa e più è complesso da coordinare con attori esterni → priorità più bassa.</div></div>
+  </div>
+
+  <div id="diag-recall"></div>
+
+  <div id="ipi-list"></div>
+  <button class="addbtn" onclick="addIntervention()">+ Aggiungi un altro intervento</button>
+</section>
+
+<!-- VIEW 4: SUMMARY -->
+<section class="view" id="view-sum">
+  <h2 class="sec">Sintesi diagnostica</h2>
+  <p class="lead">Il report completo dell'analisi: profilo, indici, diagnosi delle inefficienze e priorità degli interventi. È questa la pagina pensata per la stampa e l'export PDF.</p>
+
+  <div class="actions no-print" style="margin-top:0;margin-bottom:22px">
+    <button class="btn primary" onclick="printReport()">Esporta report PDF</button>
+    <button class="btn ghost" onclick="resetAll()">Azzera tutto</button>
+  </div>
+
+  <div id="report">
+    <div class="rep-head">
+      <div class="rep-eyebrow">Circular Commuting Framework · report diagnostico</div>
+      <div class="rep-title" id="rep-profile">—</div>
+      <div class="rep-date" id="rep-date"></div>
+    </div>
+
+    <div class="rep-section">
+      <div class="rep-h">Indici di contesto</div>
+      <div class="rep-scores" id="rep-scores"></div>
+    </div>
+
+    <div class="rep-section">
+      <div class="rep-h">Diagnosi delle inefficienze</div>
+      <div id="rep-ineff"><p class="empty">Compila gli indici del Canvas per generare la diagnosi.</p></div>
+    </div>
+
+    <div class="rep-section">
+      <div class="rep-h">Priorità degli interventi (IPI)</div>
+      <div id="rep-ipi"><p class="empty">Nessun intervento valutato nella scheda IPI.</p></div>
+    </div>
+
+    <div class="rep-foot">Economia circolare applicata alla mobilità casa-lavoro: un framework energy-aware per l'efficientamento della capacità di trasporto</div>
+  </div>
+</section>
+
+<!-- VIEW 5: LEGENDA -->
+<section class="view" id="view-leg">
+  <h2 class="sec">Legenda</h2>
+  <p class="lead">Indicatori, scale e direzione interpretativa di tutti gli score e KPI dello strumento.</p>
+
+  <div class="legcard"><h3>Score e indici</h3><div class="lc-body">
+  <table class="legtable">
+    <tr><th>Sigla</th><th>Nome</th><th>Scala</th><th>Lettura</th></tr>
+    <tr><td class="code">DMS</td><td>Data Maturity Score</td><td class="scale">0–5</td><td>più alto = maggiore maturità informativa. &lt;2 → baseline non affidabile</td></tr>
+    <tr><td class="code">MNS</td><td>Mobility Necessity Score</td><td class="scale">0–100</td><td>più alto = maggiore necessità di presenza fisica</td></tr>
+    <tr><td class="code">ACC</td><td>Accessibility Score</td><td class="scale">0–100</td><td>più alto = migliore accessibilità alternativa all'auto</td></tr>
+    <tr><td class="code">CDR</td><td>Car Dependency Ratio</td><td class="scale">0–100</td><td>negativo: più alto = maggiore dipendenza dall'auto</td></tr>
+    <tr><td class="code">I1–I5</td><td>Inefficienze circolari</td><td class="scale">0–100</td><td>più alto = inefficienza più grave</td></tr>
+    <tr><td class="code">GCS</td><td>Governance Complexity Score</td><td class="scale">1–5</td><td>più alto = maggiore complessità di governance</td></tr>
+    <tr><td class="code">IPI</td><td>Intervention Priority Index</td><td class="scale">calcolato</td><td>più alto = maggiore priorità operativa</td></tr>
+  </table></div></div>
+
+  <div class="legcard"><h3>Fasce score 0–100</h3><div class="lc-body">
+  <div class="bandlegend">
+    <span class="bandchip b1">0–20 · assente/marginale</span>
+    <span class="bandchip b2">21–40 · bassa</span>
+    <span class="bandchip b3">41–60 · media</span>
+    <span class="bandchip b4">61–80 · alta</span>
+    <span class="bandchip b5">81–100 · critica</span>
+  </div>
+  <p style="font-size:13px;color:var(--ink-soft);margin-bottom:8px"><b>ACC / CDR</b> usano quattro fasce: &lt;40 · 40–59 · 60–79 · ≥80. <b>MNS</b>: &lt;50 · 50–79 · ≥80.</p>
+  </div></div>
+
+  <div class="legcard"><h3>Le cinque inefficienze (I1–I5) e gli interventi coerenti</h3><div class="lc-body">
+  <table class="legtable">
+    <tr><th>Cod.</th><th>Inefficienza</th><th>Intervento prioritario · complementare</th></tr>
+    <tr><td class="code">I1</td><td>Capacità sottoutilizzata</td><td>Aumento load factor / carpooling organizzato · right-sizing veicoli, accordi di saturazione TPL</td></tr>
+    <tr><td class="code">I2</td><td>Duplicazione modale</td><td>Servizi condivisi tra aziende · coalizione territoriale e MM d'area</td></tr>
+    <tr><td class="code">I3</td><td>Mismatch temporale</td><td>Microtransit per turnisti · accordi con TPL su fasce critiche</td></tr>
+    <tr><td class="code">I4</td><td>Frizione ultimo miglio</td><td>Shuttle breve, e-bike, percorsi sicuri · integrazione fermate TPL/ferro</td></tr>
+    <tr><td class="code">I5</td><td>Domanda evitabile</td><td>Smart working strutturato · coworking di prossimità</td></tr>
+  </table></div></div>
+
+  <div class="legcard"><h3>Fattori energetico-emissivi WTW per modalità (Tab. 2.1)</h3><div class="lc-body">
+  <table class="legtable">
+    <tr><th>Modalità</th><th>kWh/pax-km</th><th>gCO₂e/pax-km</th></tr>
+    <tr><td>Auto termica (1 occ.)</td><td class="scale">0,65–0,90</td><td class="scale">175–230</td></tr>
+    <tr><td>Auto termica (2 occ. / carpool)</td><td class="scale">0,33–0,45</td><td class="scale">90–115</td></tr>
+    <tr><td>Auto elettrica (mix IT)</td><td class="scale">0,15–0,18</td><td class="scale">35–45</td></tr>
+    <tr><td>Autobus diesel (occ. 30%)</td><td class="scale">0,17–0,22</td><td class="scale">45–60</td></tr>
+    <tr><td>Autobus diesel (occ. 70%)</td><td class="scale">0,07–0,09</td><td class="scale">19–25</td></tr>
+    <tr><td>Autobus elettrico (occ. 70%)</td><td class="scale">0,02–0,03</td><td class="scale">5–7</td></tr>
+    <tr><td>Treno regionale elettrico</td><td class="scale">0,07–0,12</td><td class="scale">17–29</td></tr>
+    <tr><td>Bici / e-bike</td><td class="scale">0,01–0,04</td><td class="scale">0 dirette</td></tr>
+    <tr><td>Smart working (commuting evitato)</td><td class="scale">0,00</td><td class="scale">0</td></tr>
+  </table>
+  <p style="font-size:12px;color:var(--stone);font-style:italic">Il calcolatore usa il punto medio di ciascun intervallo. Valori WTW su parco italiano 2023–2024 (ISPRA, EEA, UNRAE, ISFORT). Calibrazione su flotta reale: dati tecnici operatore.</p>
+  </div></div>
+
+  <div class="legcard"><h3>Classi IPI</h3><div class="lc-body">
+  <table class="legtable">
+    <tr><th>IPI</th><th>Classe</th><th>Significato</th></tr>
+    <tr><td class="scale">&gt; 12</td><td><span class="prio A">A</span></td><td>immediatamente candidabile all'attuazione</td></tr>
+    <tr><td class="scale">6–12</td><td><span class="prio B">B</span></td><td>da programmare, approfondire o testare</td></tr>
+    <tr><td class="scale">&lt; 6</td><td><span class="prio C">C</span></td><td>da rimandare, riformulare o subordinare a precondizioni</td></tr>
+  </table>
+  <p style="font-size:12px;color:var(--stone);font-style:italic">Costo e complessità di governance sono al denominatore: valori alti riducono l'IPI.</p>
+  </div></div>
+</section>
+
+</main>
+
+<footer>made by <a href="https://linktr.ee/corazzini" target="_blank" rel="noopener">Enrico Emanuele Corazzini</a></footer>
+
+<script>
+function switchView(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelector('.tab[data-view="'+v+'"]').classList.add('active');
+  if(v==='sum')buildSummary();
+  if(v==='ipi')renderDiagRecall();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchView(t.dataset.view));
+document.querySelectorAll('.layer-head').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
+document.getElementById('L1').classList.add('open');
+
+const S={dms:null,mns:null,acc:null,cdr:null,gcs:null,ineff:{},kpi:null};
+
+function calcDMS(){
+  const v=document.getElementById('dms').value,out=document.getElementById('out-dms'),warn=document.getElementById('dms-warn');
+  if(v===''){out.style.display='none';warn.classList.remove('show');S.dms=null;return;}
+  const n=+v;S.dms=n;out.style.display='flex';
+  document.getElementById('dms-val').innerHTML=n+'<span class="u">/5</span>';
+  const names=['nessun dato','molto bassa','sufficiente per O/D','buona','avanzata','eccellente'];
+  const el=document.getElementById('dms-name');el.textContent='Maturità: '+names[n];
+  el.className='name '+(n<2?'crit':n>=4?'good':'mid');
+  document.getElementById('dms-reco').textContent=n<2?'baseline non affidabile → raccolta dati prioritaria':(n>=4?'baseline robusta, interventi data-intensive possibili':'baseline costruibile con alcune assunzioni');
+  warn.classList.toggle('show',n<2);
+}
+function calcMNS(){
+  const qe=+document.getElementById('qe').value||0,qp=+document.getElementById('qp').value||0,qr=+document.getElementById('qr').value||0;
+  const sum=qe+qp+qr,out=document.getElementById('out-mns'),warn=document.getElementById('mns-warn');
+  document.getElementById('mns-sum').textContent=sum;
+  if(sum!==100){warn.classList.add('show');out.style.display='none';S.mns=null;if(typeof renderIneff==='function')renderIneff();return;}
+  warn.classList.remove('show');
+  const mns=((qe*5+qp*3+qr*1)-100)/4;S.mns=mns;out.style.display='flex';
+  document.getElementById('mns-val').innerHTML=Math.round(mns)+'<span class="u">/100</span>';
+  document.getElementById('mns-bar').style.width=mns+'%';
+  const el=document.getElementById('mns-name'),r=document.getElementById('mns-reco');
+  if(mns<50){el.textContent='Presenza poco necessaria';el.className='name good';r.textContent='→ priorità smart working / coworking';}
+  else if(mns<80){el.textContent='Presenza parzialmente necessaria';el.className='name mid';r.textContent='→ mix riduzione domanda + shift modale';}
+  else{el.textContent='Presenza strutturalmente necessaria';el.className='name crit';r.textContent='→ ottimizzare le modalità di trasporto';}
+  if(typeof renderIneff==='function')renderIneff();
+}
+
+/* BASELINE CALCULATOR — fattori = punto medio intervalli Tab 2.1 */
+const modalities=[
+  {id:'auto1',name:'Auto termica (1 occ.)',kwh:0.775,gco2:202.5},
+  {id:'autocp',name:'Auto termica (2 occ. / carpool)',kwh:0.39,gco2:102.5},
+  {id:'autoev',name:'Auto elettrica',kwh:0.165,gco2:40},
+  {id:'busd',name:'Autobus diesel (occ. media)',kwh:0.145,gco2:42},
+  {id:'buse',name:'Autobus elettrico',kwh:0.045,gco2:11},
+  {id:'treno',name:'Treno regionale elettrico',kwh:0.095,gco2:23},
+  {id:'bici',name:'Bici / e-bike',kwh:0.025,gco2:0},
+  {id:'sw',name:'Smart working (evitato)',kwh:0,gco2:0}
+];
+function buildModalRows(){
+  const c=document.getElementById('modal-rows');
+  modalities.forEach(m=>{
+    const row=document.createElement('div');row.className='modalrow';
+    row.innerHTML=`<div><div class="mname">${m.name}</div><div class="mfact">${m.kwh} kWh/pax-km</div></div>
+      <input type="number" min="0" data-id="${m.id}" placeholder="0">
+      <div class="mfact" style="text-align:center;align-self:center">${m.gco2}</div>`;
+    row.querySelector('input').oninput=calcBaseline;
+    c.appendChild(row);
+  });
+}
+function calcBaseline(){
+  const dist=+document.getElementById('bl-dist').value||0;
+  const gg=+document.getElementById('bl-gg').value||0;
+  let sum=0,paxkm=0,totE=0,totCO2=0;
+  modalities.forEach(m=>{
+    const inp=document.querySelector('#modal-rows input[data-id="'+m.id+'"]');
+    const n=+inp.value||0;sum+=n;
+    const pk=n*(dist*2)*gg; // andata+ritorno
+    paxkm+=pk;
+    totE+=pk*m.kwh;
+    totCO2+=pk*m.gco2/1000000; // tCO2e
+  });
+  document.getElementById('bl-sum').textContent=sum;
+  const ndip=+document.getElementById('bl-n').value||0;
+  const chk=document.getElementById('bl-check');
+  if(ndip>0&&sum!==ndip){chk.innerHTML=' — <span style="color:var(--coral)">≠ '+ndip+' dichiarati</span>';}
+  else if(sum>0){chk.innerHTML=' — <span style="color:var(--signal-deep)">ok</span>';}else{chk.innerHTML='';}
+  const box=document.getElementById('bl-kpi');
+  if(paxkm<=0||dist<=0){box.style.display='none';S.kpi=null;return;}
+  box.style.display='grid';
+  const kwhAvg=totE/paxkm, gco2Avg=totCO2*1000000/paxkm;
+  document.getElementById('kpi-kwh').textContent=kwhAvg.toFixed(3);
+  document.getElementById('kpi-gco2').textContent=Math.round(gco2Avg);
+  document.getElementById('kpi-tco2').textContent=totCO2.toFixed(1);
+  document.getElementById('kpi-paxkm').textContent=(paxkm/1000000).toFixed(2);
+  S.kpi={kwh:kwhAvg,gco2:gco2Avg,tco2:totCO2,paxkm:paxkm};
+}
+
+const accVoci=[
+ ["Distanza pedonale fermata TPL",["≤5 min","5–10 min","10–15 min","15–25 min",">25 min / assente"]],
+ ["Distanza stazione ferroviaria",["≤10 min / diretta freq.","10–15 min","15–25 min / 1 cambio","25–40 min / poco affid.","non utilizzabile"]],
+ ["Frequenza TPL fasce ingresso/uscita",["≤15 min","16–30 min","31–60 min",">60 min / discontinuo","assente"]],
+ ["Compatibilità TPL con turni",["copertura completa","buona (<15 min attesa)","parziale (15–30 min)","solo alcune fasce","assente"]],
+ ["Sicurezza ultimo miglio",["sicuro, illuminato, continuo","sicuro, criticità minori","usabile, criticità rilev.","poco sicuro/scomodo","non sicuro/non pedonale"]],
+ ["Infrastruttura ciclabile/pedonale",["continua e protetta","quasi completa","parziale ma usabile","frammentata","assente"]],
+ ["Dotazioni interne mobilità attiva",["rastrelliere+docce+spogl.+policy","rastrelliere+1 dotazione","rastrelliere, dotaz. limitate","minime/non sicure","assenti"]]
+];
+const cdrVoci=[
+ ["Quota auto solo conducente",[">80%","61–80%","41–60%","21–40%","≤20%"]],
+ ["Parcheggio gratuito aziendale",["garantito/abbondante","ampio non garantito","parziale/saturazione","limitato/tariffato","assente/tariffato"]],
+ ["Facilità accesso in auto",["molto facile, competitivo","generalmente facile","congestione moderata","spesso congestionato","difficoltoso/disincentivato"]],
+ ["Turni non coperti dal TPL",[">75% non coperti","51–75%","26–50%","1–25%","coperti/quasi"]],
+ ["Assenza alternative ultimo miglio",["nessuna alternativa","molto scomoda/non sicura","parziale","presente ma migliorabile","ultimo miglio efficace"]]
+];
+function buildScoreRows(cid,voci,onchange){
+  const c=document.getElementById(cid);
+  voci.forEach((v,i)=>{
+    const row=document.createElement('div');row.className='scorerow';
+    let opts='<option value="">— seleziona —</option>';
+    v[1].forEach((txt,j)=>{opts+=`<option value="${5-j}">${5-j} · ${txt}</option>`;});
+    row.innerHTML=`<div class="lbl">${v[0]}</div><select data-i="${i}">${opts}</select>`;
+    row.querySelector('select').onchange=onchange;c.appendChild(row);
+  });
+}
+function avgSelects(cid){
+  const sels=document.querySelectorAll('#'+cid+' select');let vals=[];
+  sels.forEach(s=>{if(s.value!=='')vals.push(+s.value);});
+  if(vals.length<sels.length)return null;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+function calcACC(){
+  const avg=avgSelects('acc-rows'),out=document.getElementById('out-acc');
+  if(avg===null){out.style.display='none';S.acc=null;if(typeof renderIneff==='function')renderIneff();return;}
+  const acc=((avg-1)/4)*100;S.acc=acc;out.style.display='flex';
+  document.getElementById('acc-val').innerHTML=Math.round(acc)+'<span class="u">/100</span>';
+  document.getElementById('acc-bar').style.width=acc+'%';
+  const el=document.getElementById('acc-name'),r=document.getElementById('acc-reco');
+  if(acc<40){el.textContent='Accessibilità critica';el.className='name crit';r.textContent='alternative all\'auto poco praticabili';}
+  else if(acc<60){el.textContent='Accessibilità bassa';el.className='name mid';r.textContent='shift modale faticoso senza interventi';}
+  else if(acc<80){el.textContent='Accessibilità buona';el.className='name good';r.textContent='margini di shift modale concreti';}
+  else{el.textContent='Accessibilità ottima';el.className='name good';r.textContent='leve immediate di shift modale';}
+  if(typeof renderIneff==='function')renderIneff();
+}
+function calcCDR(){
+  const avg=avgSelects('cdr-rows'),out=document.getElementById('out-cdr');
+  if(avg===null){out.style.display='none';S.cdr=null;if(typeof renderIneff==='function')renderIneff();return;}
+  const cdr=((avg-1)/4)*100;S.cdr=cdr;out.style.display='flex';
+  document.getElementById('cdr-val').innerHTML=Math.round(cdr)+'<span class="u">/100</span>';
+  document.getElementById('cdr-bar').style.width=cdr+'%';
+  document.getElementById('cdr-bar').style.background='var(--coral)';
+  const el=document.getElementById('cdr-name'),r=document.getElementById('cdr-reco');
+  if(cdr<40){el.textContent='Dipendenza bassa';el.className='name good';r.textContent='struttura non auto-centrica';}
+  else if(cdr<60){el.textContent='Dipendenza media';el.className='name mid';r.textContent='spazio per ridurre il solo-conducente';}
+  else if(cdr<80){el.textContent='Dipendenza alta';el.className='name crit';r.textContent='intervenire su struttura e incentivi';}
+  else{el.textContent='Dipendenza critica';el.className='name crit';r.textContent='priorità infrastrutture/governance prima dei comportamenti';}
+  if(typeof renderIneff==='function')renderIneff();
+}
+
+/* INEFFICIENZE — DERIVATE dagli indici (ACC, CDR, MNS, baseline) con override manuale */
+const ineffData=[
+ {code:"I1",name:"Capacità sottoutilizzata",intv:"aumento load factor / carpooling organizzato"},
+ {code:"I2",name:"Duplicazione modale",intv:"servizi condivisi tra aziende / coalizione territoriale"},
+ {code:"I3",name:"Mismatch temporale",intv:"microtransit per turnisti / accordi TPL su fasce"},
+ {code:"I4",name:"Frizione ultimo miglio",intv:"shuttle breve, e-bike, percorsi sicuri"},
+ {code:"I5",name:"Domanda evitabile",intv:"smart working strutturato / coworking di prossimità"}
+];
+const overrides={}; // code -> {val, note} se corretto a mano
+function bandClass(v){return v<=20?1:v<=40?2:v<=60?3:v<=80?4:5;}
+function bandName(v){return ['assente','bassa','media','alta','critica'][bandClass(v)-1];}
+// helper: recupera punteggio grezzo (1-5) di una specifica voce ACC o CDR
+function rawScore(cid,idx){const s=document.querySelectorAll('#'+cid+' select')[idx];return s&&s.value!==''?+s.value:null;}
+// mappa media 1-5 -> 0-100 in scala "gravità" (1 ottimo->basso, 5 pessimo->alto a seconda del segno)
+function lin(x){return Math.round(((x-1)/4)*100);} // 1->0 ... 5->100
+
+/* Regole di derivazione (fedeli a Tab. 6.6 e §5.4 della tesi) */
+function deriveIneff(){
+  const out={}; // code -> {val, why, src, available}
+  // ---- I1: capacità sottoutilizzata <- CDR (cap. privata latente) ----
+  if(S.cdr!==null){
+    const v=Math.round(S.cdr); // CDR già 0-100, dipendenza alta = capacità latente alta
+    out.I1={val:v,available:true,src:'da CDR + quota solo-conducente',
+      why:`CDR = ${Math.round(S.cdr)} (dipendenza ${S.cdr<40?'bassa':S.cdr<60?'media':S.cdr<80?'alta':'critica'}): più alta è la dipendenza dall'auto privata con solo conducente, maggiore è la capacità latente non sfruttata.`};
+  } else out.I1={available:false};
+  // ---- I2: duplicazione modale <- non desumibile dagli indici di sede singola ----
+  out.I2={available:false,src:'non desumibile dagli indici',
+    why:'Riguarda servizi paralleli tra più aziende/corridoi: non è ricavabile dai dati di una singola sede. Da valutare a mano se nel territorio esistono servizi sovrapposti.'};
+  // ---- I3: mismatch temporale <- voci "compatibilità turni" (ACC#4) e "turni non coperti" (CDR#4) ----
+  {
+    const accTurni=rawScore('acc-rows',3); // compatibilità TPL con turni (1 buono..5 assente)
+    const cdrTurni=rawScore('cdr-rows',3); // turni non coperti (1 coperti..5 non coperti)
+    const parts=[];let vals=[];
+    if(accTurni!==null){vals.push(lin(accTurni));parts.push('compatibilità TPL/turni');}
+    if(cdrTurni!==null){vals.push(lin(cdrTurni));parts.push('turni non coperti dal TPL');}
+    if(vals.length){const v=Math.round(vals.reduce((a,b)=>a+b)/vals.length);
+      out.I3={val:v,available:true,src:'dalle voci sui turni di ACC e CDR',
+        why:`Basata su ${parts.join(' e ')}: più gli orari aziendali non sono coperti dal TPL, più alto il mismatch.`};
+    } else out.I3={available:false,src:'dalle voci sui turni',why:'Compila le voci "compatibilità TPL con turni" (blocco 4) e "turni non coperti" (blocco 5).'};
+  }
+  // ---- I4: frizione ultimo miglio <- ACC (basso ACC = alto I4) ----
+  if(S.acc!==null){
+    const v=Math.round(100-S.acc); // ACC alto = accessibilità buona = I4 basso
+    out.I4={val:v,available:true,src:'da ACC (invertito)',
+      why:`ACC = ${Math.round(S.acc)} (accessibilità ${S.acc<40?'critica':S.acc<60?'bassa':S.acc<80?'buona':'ottima'}): l'inefficienza di ultimo miglio è l'inverso dell'accessibilità — più la sede è raggiungibile senz'auto, minore la frizione.`};
+  } else out.I4={available:false};
+  // ---- I5: domanda evitabile <- MNS, con regola di coerenza MNS<50 => I5>=61 ----
+  if(S.mns!==null){
+    let v=Math.round(100-S.mns); // MNS alto = presenza necessaria = I5 basso
+    let note='';
+    if(S.mns<50&&v<61){v=61;note=' Regola di coerenza: con MNS < 50 l\'inefficienza I5 è forzata almeno ad "alta".';}
+    out.I5={val:v,available:true,src:'da MNS (invertito)',
+      why:`MNS = ${Math.round(S.mns)} (presenza ${S.mns<50?'poco necessaria':S.mns<80?'parzialmente necessaria':'strutturalmente necessaria'}): più mansioni potrebbero stare da remoto, più alta la domanda evitabile.${note}`};
+  } else out.I5={available:false};
+  return out;
+}
+function buildIneff(){renderIneff();}
+function renderIneff(){
+  const c=document.getElementById('ineff-rows');c.innerHTML='';
+  const derived=deriveIneff();
+  let anyAvail=false;S.ineff={};
+  ineffData.forEach(x=>{
+    const d=derived[x.code];
+    const ov=overrides[x.code];
+    let val,why,src,edited=false;
+    if(ov&&ov.val!=null){val=ov.val;edited=true;why=ov.note?('Valore corretto a mano. Motivo: '+ov.note):'Valore corretto a mano.';src='override esperto';}
+    else if(d.available){val=d.val;why=d.why;src=d.src;}
+    else{val=null;why=d.why||'Non ancora derivabile: compila gli indici corrispondenti.';src=d.src||'';}
+    S.ineff[x.code]=val;
+    if(val!==null)anyAvail=true;
+    const bc=val===null?'na':bandClass(val);
+    const badge=val===null?'<span class="diag-badge na">n.d.</span>':`<span class="diag-badge b${bc}">${val}/100 · ${bandName(val)}</span>`;
+    // opzioni override
+    let ovOpts='<option value="">automatico</option>';
+    [['10','0–20 assente'],['30','21–40 bassa'],['50','41–60 media'],['70','61–80 alta'],['90','81–100 critica']].forEach(o=>{
+      ovOpts+=`<option value="${o[0]}" ${ov&&ov.val==o[0]?'selected':''}>${o[1]}</option>`;
+    });
+    const row=document.createElement('div');row.className='diag-row'+(edited?' edited':'');
+    row.innerHTML=`<div class="diag-head"><span class="diag-code">${x.code}</span><span class="diag-name">${x.name}</span>${badge}</div>
+      <div class="diag-why">${why} <span class="src">· fonte: ${src}</span></div>
+      <div class="diag-why" style="margin-top:4px"><b>Intervento coerente:</b> ${x.intv}</div>
+      <div class="diag-override"><span>correggi:</span>
+        <select data-code="${x.code}" data-role="ovval">${ovOpts}</select>
+        <input type="text" data-code="${x.code}" data-role="ovnote" placeholder="motivo della correzione (consigliato)" value="${ov&&ov.note?ov.note.replace(/"/g,'&quot;'):''}">
+      </div>`;
+    c.appendChild(row);
+  });
+  c.querySelectorAll('[data-role="ovval"]').forEach(s=>s.onchange=e=>{
+    const code=e.target.dataset.code;
+    if(e.target.value===''){delete overrides[code];}
+    else{overrides[code]=overrides[code]||{};overrides[code].val=e.target.value;}
+    renderIneff();
+  });
+  c.querySelectorAll('[data-role="ovnote"]').forEach(i=>i.oninput=e=>{
+    const code=e.target.dataset.code;
+    if(overrides[code])overrides[code].note=e.target.value;
+  });
+  document.getElementById('ineff-empty').style.display=anyAvail?'none':'block';
+  // prevalente
+  const out=document.getElementById('out-ineff');
+  let top=null,topv=-1;
+  for(const k in S.ineff){if(S.ineff[k]!==null&&S.ineff[k]>topv){topv=S.ineff[k];top=k;}}
+  if(top===null){out.style.display='none';return;}
+  out.style.display='flex';
+  const info=ineffData.find(x=>x.code===top);
+  document.getElementById('ineff-top').textContent=`${top} — ${info.name} (${topv}/100)`;
+  document.getElementById('ineff-reco').textContent='Intervento coerente: '+info.intv;
+}
+function calcIneff(){renderIneff();}
+function calcGCS(){
+  const v=document.getElementById('gcs').value,out=document.getElementById('out-gcs'),warn=document.getElementById('gcs-warn');
+  if(v===''){out.style.display='none';warn.classList.remove('show');S.gcs=null;return;}
+  const n=+v;S.gcs=n;out.style.display='flex';
+  document.getElementById('gcs-val').innerHTML=n+'<span class="u">/5</span>';
+  const names=['','interno semplice','interno multi-funzione','con fornitori esterni','con attori pubblici/TPL','coalizione multi-attore'];
+  const el=document.getElementById('gcs-name');el.textContent=names[n];
+  el.className='name '+(n>=4?'crit':n>=3?'mid':'good');
+  document.getElementById('gcs-reco').textContent=n>=4?'richiede piano di governance esplicito / tavolo territoriale':'attuabile con risorse prevalentemente interne';
+  warn.classList.toggle('show',n>=4);
+}
+
+/* IPI — interventi dalla matrice 5.5, con GCS suggerito */
+const interventionCatalog=[
+ {label:"I1 · Aumento load factor servizi collettivi",ineff:"I1",gcs:3},
+ {label:"I1 · Carpooling organizzato",ineff:"I1",gcs:3},
+ {label:"I1 · Right-sizing veicoli / accorpamento corse",ineff:"I1",gcs:3},
+ {label:"I1 · Accordi di saturazione con operatore TPL",ineff:"I1",gcs:4},
+ {label:"I2 · Servizi condivisi tra aziende",ineff:"I2",gcs:4},
+ {label:"I2 · Coalizione territoriale / MM d'area",ineff:"I2",gcs:5},
+ {label:"I3 · Microtransit per turnisti",ineff:"I3",gcs:3},
+ {label:"I3 · Accordi con TPL su fasce critiche",ineff:"I3",gcs:4},
+ {label:"I4 · Shuttle breve di adduzione",ineff:"I4",gcs:3},
+ {label:"I4 · E-bike / micromobilità aziendale",ineff:"I4",gcs:3},
+ {label:"I4 · Percorsi sicuri ultimo miglio",ineff:"I4",gcs:4},
+ {label:"I4 · Integrazione con fermate TPL/ferro",ineff:"I4",gcs:4},
+ {label:"I5 · Smart working strutturato",ineff:"I5",gcs:2},
+ {label:"I5 · Coworking di prossimità",ineff:"I5",gcs:3}
+];
+let interventions=[];let iid=0;
+// Ogni dimensione: domanda in italiano + 5 risposte testuali (rubrica tesi). dir: 'up' aumenta priorità, 'down' la riduce (denominatore).
+const ipiQuestions=[
+ {key:"imp",dir:"up",
+  q:"Quanto si prevede che questo intervento riduca consumi ed emissioni?",
+  sub:"Effetto atteso su kWh/pax-km e gCO₂e rispetto alla situazione attuale.",
+  a:["Impatto marginale o non stimabile","Riduzione limitata","Riduzione media","Riduzione elevata","Riduzione molto elevata"]},
+ {key:"data",dir:"up",
+  q:"Quanto sono solidi i dati per progettare e misurare questo intervento?",
+  sub:"Disponibilità e qualità dei dati (O/D, turni, modalità, accessibilità).",
+  a:["Dati insufficienti","Dati deboli, molte assunzioni","Dati sufficienti ma incompleti","Dati buoni, poche assunzioni","Dati completi e aggiornati"]},
+ {key:"acc",dir:"up",
+  q:"Quanto è probabile che le persone in azienda lo accettino?",
+  sub:"Consenso interno atteso e rischio di resistenze.",
+  a:["Forte opposizione o rischio elevato","Resistenze prevedibili","Accettabilità incerta","Accettabilità buona","Forte consenso, basso rischio"]},
+ {key:"cost",dir:"down",
+  q:"Quanto costa realizzarlo?",
+  sub:"Più alto è il costo, più la priorità si abbassa.",
+  a:["Costo nullo o molto basso","Costo basso","Costo medio","Costo elevato","Costo molto elevato / investimento strutturale"]},
+ {key:"gov",dir:"down",
+  q:"Quanti soggetti servono per attuarlo?",
+  sub:"Più attori esterni coinvolge, più è complesso (e la priorità scende). In genere già impostato in base all'intervento scelto.",
+  a:["Si fa internamente, senza coordinarsi con altri","Serve coordinare più funzioni interne","Servono fornitori esterni","Servono Comune / TPL / enti pubblici","Serve una coalizione di più soggetti"]}
+];
+function addIntervention(){
+  const id=iid++;interventions.push({id,cat:'',imp:'',data:'',acc:'',cost:'',gov:''});renderIPI();
+}
+// Aggiunge un intervento già preselezionato sul catalogo, evitando duplicati
+function addInterventionFor(catIdx){
+  // se esiste già una card vuota, riusala; altrimenti creane una nuova
+  let slot=interventions.find(it=>it.cat===''||it.cat==null);
+  if(!slot){const id=iid++;slot={id,cat:'',imp:'',data:'',acc:'',cost:'',gov:''};interventions.push(slot);}
+  slot.cat=String(catIdx);
+  if(slot.gov===''||slot.gov==null)slot.gov=String(interventionCatalog[catIdx].gcs);
+  renderIPI();renderDiagRecall();
+  // porta lo sguardo sulla lista
+  setTimeout(()=>{document.getElementById('ipi-list').scrollIntoView({behavior:'smooth',block:'start'});},50);
+}
+// Pannello che richiama la diagnosi dal Canvas e suggerisce gli interventi coerenti
+function renderDiagRecall(){
+  const c=document.getElementById('diag-recall');
+  // raccogli inefficienze valutate, ordinate per gravità decrescente
+  const items=[];
+  for(const k in S.ineff){if(S.ineff[k]!==null)items.push({code:k,val:S.ineff[k]});}
+  items.sort((a,b)=>b.val-a.val);
+  if(items.length===0){
+    c.innerHTML=`<div class="diag-recall"><h3>Diagnosi dal Canvas</h3>
+      <p class="dr-empty">Non hai ancora una diagnosi: compila i blocchi del Canvas (almeno MNS, ACC, CDR) e qui ricomparirà l'elenco delle inefficienze emerse, con gli interventi coerenti da aggiungere con un clic.</p></div>`;
+    return;
+  }
+  // catalogo già scelto (per marcare "aggiunto")
+  const chosen=new Set(interventions.filter(it=>it.cat!=='').map(it=>+it.cat));
+  // mostra solo inefficienze rilevanti (>=41, cioè media e oltre)
+  const relevant=items.filter(i=>i.val>=41);
+  const shown=relevant.length?relevant:items.slice(0,3);
+  const bandName=v=>['assente','bassa','media','alta','critica'][v<=20?0:v<=40?1:v<=60?2:v<=80?3:4];
+  const bandCls=v=>v<=60?'b3':v<=80?'b4':'b5';
+  let rows='';
+  const allSuggested=[];
+  shown.forEach(it=>{
+    const info=ineffData.find(x=>x.code===it.code);
+    // interventi del catalogo per questa inefficienza
+    interventionCatalog.forEach((ic,idx)=>{
+      if(ic.ineff===it.code){
+        const done=chosen.has(idx);
+        if(!done)allSuggested.push(idx);
+        rows+=`<div class="dr-item">
+          <span class="dr-badge ${bandCls(it.val)}">${it.code} · ${it.val}/100 · ${bandName(it.val)}</span>
+          <div class="dr-body"><div class="dn">${ic.label.replace(/^I\d · /,'')}</div><div class="di">affronta: ${info.name}</div></div>
+          <button class="dr-add ${done?'done':''}" ${done?'':'onclick="addInterventionFor('+idx+')"'}>${done?'✓ aggiunto':'+ aggiungi'}</button>
+        </div>`;
+      }
+    });
+  });
+  const uniqueSuggested=[...new Set(allSuggested)];
+  const allBtn=uniqueSuggested.length>1?`<button class="dr-allbtn" onclick="addAllSuggested([${uniqueSuggested.join(',')}])">+ Aggiungi tutti gli interventi suggeriti (${uniqueSuggested.length})</button>`:'';
+  c.innerHTML=`<div class="diag-recall">
+    <h3>Diagnosi dal Canvas — da qui partono gli interventi</h3>
+    <p class="sub">Queste sono le inefficienze emerse nel Canvas (dalla più grave). Per ciascuna, lo strumento propone gli interventi coerenti della matrice del framework: aggiungili e poi valutali qui sotto.</p>
+    <div class="dr-list">${rows}</div>
+    ${allBtn}
+  </div>`;
+}
+function addAllSuggested(idxArr){
+  idxArr.forEach(idx=>{
+    if(!interventions.some(it=>it.cat==idx)){
+      let slot=interventions.find(it=>it.cat===''||it.cat==null);
+      if(!slot){const id=iid++;slot={id,cat:'',imp:'',data:'',acc:'',cost:'',gov:''};interventions.push(slot);}
+      slot.cat=String(idx);
+      if(slot.gov===''||slot.gov==null)slot.gov=String(interventionCatalog[idx].gcs);
+    }
+  });
+  renderIPI();renderDiagRecall();
+  setTimeout(()=>{document.getElementById('ipi-list').scrollIntoView({behavior:'smooth',block:'start'});},50);
+}
+function renderIPI(){
+  const c=document.getElementById('ipi-list');
+  if(interventions.length===0){c.innerHTML='<p class="empty">Nessun intervento. Premi il pulsante qui sotto per aggiungerne uno.</p>';return;}
+  c.innerHTML='';
+  interventions.forEach((it,n)=>{
+    const d=document.createElement('div');d.className='intv';
+    let catOpts='<option value="">— scegli un intervento —</option>';
+    interventionCatalog.forEach((ic,idx)=>{catOpts+=`<option value="${idx}" ${it.cat==idx?'selected':''}>${ic.label}</option>`;});
+    let qs='';
+    ipiQuestions.forEach((Q,qi)=>{
+      let opts='<option value="">— scegli la risposta —</option>';
+      Q.a.forEach((txt,k)=>{opts+=`<option value="${k+1}" ${it[Q.key]==k+1?'selected':''}>${txt}</option>`;});
+      const tag=Q.dir==='up'?'<span class="tagdir up">alza la priorità</span>':'<span class="tagdir down">abbassa la priorità</span>';
+      qs+=`<div class="qcard ${Q.dir==='down'?'denom':''}">
+        <div class="q-num">DOMANDA ${qi+1}</div>
+        <div class="q-txt">${Q.q}${tag}</div>
+        <div class="q-sub">${Q.sub}</div>
+        <select data-id="${it.id}" data-dim="${Q.key}">${opts}</select></div>`;
+    });
+    const meta=it.cat!==''?`Affronta l'inefficienza ${interventionCatalog[it.cat].ineff} · per la domanda 5 abbiamo già impostato un valore tipico, modificalo se serve`:'Scegli prima un intervento dalla lista (sono quelli previsti dal framework)';
+    d.innerHTML=`<div class="ihead"><select data-id="${it.id}" data-dim="cat">${catOpts}</select>${interventions.length>1?`<button class="rm" data-id="${it.id}" title="Rimuovi">×</button>`:''}</div>
+      <div class="imeta">${meta}</div>
+      <div class="qbody">${qs}</div>
+      <div class="ipiout" id="ipiout-${it.id}" style="display:none"><span class="num" id="ipinum-${it.id}">—</span><span class="prio" id="ipiprio-${it.id}"></span><span class="verdict" id="ipiverdict-${it.id}"></span></div>`;
+    c.appendChild(d);
+  });
+  c.querySelectorAll('select').forEach(el=>{
+    el.onchange=e=>{
+      const it=interventions.find(x=>x.id==e.target.dataset.id);
+      const dim=e.target.dataset.dim;it[dim]=e.target.value;
+      if(dim==='cat'){
+        if(e.target.value!==''&&(it.gov===''||it.gov==null)){it.gov=String(interventionCatalog[e.target.value].gcs);}
+        renderIPI();if(typeof renderDiagRecall==='function')renderDiagRecall();return;
+      }
+      calcIPI(it);
+    };
+  });
+  c.querySelectorAll('.rm').forEach(b=>b.onclick=e=>{interventions=interventions.filter(x=>x.id!=e.target.dataset.id);renderIPI();if(typeof renderDiagRecall==='function')renderDiagRecall();});
+  interventions.forEach(it=>calcIPI(it));
+}
+function calcIPI(it){
+  const out=document.getElementById('ipiout-'+it.id);if(!out)return;
+  const vals=[it.imp,it.data,it.acc,it.cost,it.gov];
+  if(vals.some(v=>v===''||v==null)){out.style.display='none';it.ipi=null;return;}
+  const ipi=(+it.imp*+it.data*+it.acc)/(+it.cost*+it.gov);it.ipi=ipi;out.style.display='flex';
+  document.getElementById('ipinum-'+it.id).textContent=ipi.toFixed(1);
+  const p=document.getElementById('ipiprio-'+it.id);
+  const cls=ipi>12?'A':ipi>=6?'B':'C';p.className='prio '+cls;p.textContent='Priorità '+cls;
+  const verdicts={
+    A:'<b>Falla subito.</b> Buon ritorno e fattibilità: candidabile all\'attuazione immediata.',
+    B:'<b>Da programmare.</b> Promettente ma da approfondire, testare o pianificare prima di partire.',
+    C:'<b>Da rimandare.</b> Per ora poco conveniente o troppo complesso: riformula o crea prima le condizioni.'
+  };
+  document.getElementById('ipiverdict-'+it.id).innerHTML=verdicts[cls];
+}
+
+function buildSummary(){
+  const org=document.getElementById('org').value||'Organizzazione non specificata',sede=document.getElementById('sede').value;
+  document.getElementById('rep-profile').textContent=org+(sede?' — '+sede:'');
+  const d=new Date();
+  document.getElementById('rep-date').textContent='Report generato il '+d.toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
+
+  // --- SCORE ---
+  const scoreColor=v=>v<40?'var(--signal)':v<60?'var(--lime)':v<80?'var(--coral)':'var(--coral)';
+  const cards=[];
+  cards.push({lab:'DMS · maturità dato',val:S.dms===null?'—':S.dms+'/5',band:S.dms===null?'non valutato':(S.dms<2?'critica':S.dms>=4?'avanzata':'sufficiente'),cls:S.dms===null?'':(S.dms<2?'crit':S.dms>=4?'good':''),bar:S.dms===null?null:S.dms/5*100,barcol:S.dms<2?'var(--coral)':'var(--signal)'});
+  cards.push({lab:'MNS · necessità presenza',val:S.mns===null?'—':Math.round(S.mns)+'/100',band:S.mns===null?'non valutato':(S.mns<50?'presenza poco necessaria':S.mns<80?'parzialmente necessaria':'strutturalmente necessaria'),cls:'',bar:S.mns===null?null:S.mns,barcol:'var(--forest-soft)'});
+  cards.push({lab:'ACC · accessibilità',val:S.acc===null?'—':Math.round(S.acc)+'/100',band:S.acc===null?'non valutato':(S.acc<40?'critica':S.acc<60?'bassa':S.acc<80?'buona':'ottima'),cls:S.acc===null?'':(S.acc<40?'crit':S.acc>=60?'good':''),bar:S.acc===null?null:S.acc,barcol:S.acc>=60?'var(--signal)':'var(--coral)'});
+  cards.push({lab:'CDR · dipendenza auto',val:S.cdr===null?'—':Math.round(S.cdr)+'/100',band:S.cdr===null?'non valutato':(S.cdr<40?'bassa':S.cdr<60?'media':S.cdr<80?'alta':'critica'),cls:S.cdr===null?'':(S.cdr>=60?'crit':'good'),bar:S.cdr===null?null:S.cdr,barcol:S.cdr>=60?'var(--coral)':'var(--signal)'});
+  cards.push({lab:'GCS · governance',val:S.gcs===null?'—':S.gcs+'/5',band:S.gcs===null?'non valutato':(S.gcs>=4?'territoriale':'interno'),cls:'',bar:S.gcs===null?null:S.gcs/5*100,barcol:S.gcs>=4?'var(--coral)':'var(--forest-soft)'});
+  cards.push({lab:'Emissioni baseline',val:S.kpi?S.kpi.tco2.toFixed(1):'—',band:S.kpi?'tCO₂e / anno':'non calcolato',cls:'',bar:null,barcol:''});
+  const g=document.getElementById('rep-scores');g.innerHTML='';
+  cards.forEach(c=>{
+    const bar=c.bar===null?'':`<div class="rs-bar"><i style="width:${Math.max(0,Math.min(100,c.bar))}%;background:${c.barcol}"></i></div>`;
+    g.innerHTML+=`<div class="rep-score ${c.cls}"><div class="rs-lab">${c.lab}</div><div class="rs-val">${c.val}</div><div class="rs-band" style="color:var(--stone)">${c.band}</div>${bar}</div>`;
+  });
+
+  // --- DIAGNOSI INEFFICIENZE ---
+  const ri=document.getElementById('rep-ineff');
+  const items=[];for(const k in S.ineff){if(S.ineff[k]!==null)items.push({code:k,val:S.ineff[k]});}
+  items.sort((a,b)=>b.val-a.val);
+  if(items.length===0){ri.innerHTML='<p class="empty">Compila gli indici del Canvas per generare la diagnosi.</p>';}
+  else{
+    const nm={I1:'Capacità sottoutilizzata',I2:'Duplicazione modale',I3:'Mismatch temporale',I4:'Frizione ultimo miglio',I5:'Domanda evitabile'};
+    const bandTxt=v=>v<=20?'assente':v<=40?'bassa':v<=60?'media':v<=80?'alta':'critica';
+    const bandCol=v=>v<=40?'var(--signal)':v<=60?'var(--lime)':'var(--coral)';
+    ri.innerHTML=items.map(it=>`<div class="rep-ineff-item">
+      <span class="ri-code">${it.code}</span>
+      <span class="ri-name">${nm[it.code]}</span>
+      <span class="ri-bar"><i style="width:${it.val}%;background:${bandCol(it.val)}"></i></span>
+      <span class="ri-val">${it.val} · ${bandTxt(it.val)}</span></div>`).join('');
+  }
+
+  // --- IPI ---
+  const ranked=interventions.filter(i=>i.ipi!=null&&i.cat!=='').sort((a,b)=>b.ipi-a.ipi);
+  const rip=document.getElementById('rep-ipi');
+  if(ranked.length===0){rip.innerHTML='<p class="empty">Nessun intervento valutato nella scheda IPI.</p>';}
+  else{
+    const pcol={A:'var(--signal)',B:'var(--lime)',C:'var(--stone-light)'};
+    rip.innerHTML=ranked.map((it,idx)=>{
+      const cls=it.ipi>12?'A':it.ipi>=6?'B':'C';
+      const nm=interventionCatalog[it.cat].label;
+      return `<div class="rep-ipi-row"><span class="rank">#${idx+1}</span><span class="rname">${nm}</span><span class="rnum">${it.ipi.toFixed(1)}</span><span class="prio ${cls}" style="-webkit-print-color-adjust:exact;print-color-adjust:exact">${cls}</span></div>`;
+    }).join('');
+  }
+}
+function printReport(){buildSummary();window.print();}
+function resetAll(){
+  if(!confirm('Azzerare tutti i dati inseriti?'))return;
+  document.querySelectorAll('input,select,textarea').forEach(e=>{if(e.id==='bl-gg'){e.value='220';}else{e.value='';}});
+  document.querySelectorAll('.scoreout,.warn').forEach(e=>{e.style.display='none';if(e.classList)e.classList.remove('show');});
+  document.getElementById('bl-kpi').style.display='none';
+  S.dms=S.mns=S.acc=S.cdr=S.gcs=S.kpi=null;S.ineff={};Object.keys(overrides).forEach(k=>delete overrides[k]);interventions=[];iid=0;renderIPI();renderIneff();
+  document.getElementById('bl-sum').textContent='0';document.getElementById('bl-check').innerHTML='';
+}
+
+buildModalRows();
+buildScoreRows('acc-rows',accVoci,calcACC);
+buildScoreRows('cdr-rows',cdrVoci,calcCDR);
+buildIneff();
+renderIPI();
+</script>
+
+<button type="button" class="help-fab" id="help-fab" aria-haspopup="dialog" aria-controls="help-drawer">
+  <span class="pulse"></span>
+  <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .9-1 1.6v.5"/><path d="M12 16.8h.01"/></svg>
+  <span class="sr-only">Cosa c'è in questa pagina?</span>
+</button>
+<div class="help-drawer" id="help-drawer" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="help-backdrop" data-close-help></div>
+  <aside class="help-panel">
+    <div class="help-head"><span class="help-eyebrow">Cosa c'è a schermo</span><button type="button" class="help-close" data-close-help aria-label="Chiudi"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="help-body" id="help-body"></div>
+  </aside>
+</div>
+<script>
+/* Aiuto contestuale della versione semplificata: il testo cambia con la scheda aperta. */
+(function () {
+  var HELP = {
+    ccf: ['Il framework in cinque layer', "Ogni layer risponde a una domanda: ho dati sufficienti, dove si genera lo spreco, quanto pesa, quale intervento è coerente, come si governa nel tempo. Clicca su un layer per aprirlo."],
+    canvas: ['Il Canvas', "Otto blocchi in sequenza: ogni blocco produce uno score che alimenta il successivo. Gli score si calcolano mentre compili; le inefficienze I1–I5 derivano dagli indici e puoi correggerle indicando il motivo."],
+    ipi: ['La prioritizzazione', "Per ogni intervento rispondi a cinque domande: impatto, dati, accettazione, costo e complessità di governance. L'Intervention Priority Index ordina gli interventi nelle classi A, B e C."],
+    sum: ['La sintesi', "Il report completo dell'analisi, pronto da stampare o da salvare in PDF con il pulsante in alto."],
+    leg: ['La legenda', "Scale, fasce di lettura e fattori energetici ed emissivi usati dallo strumento."]
+  };
+  var drawer = document.getElementById('help-drawer'), body = document.getElementById('help-body'), last = null;
+  function current() { var t = document.querySelector('.tab.active'); return t ? t.getAttribute('data-view') : 'ccf'; }
+  function open() {
+    var h = HELP[current()] || HELP.ccf;
+    body.innerHTML = '<h3 id="help-title">' + h[0] + '</h3><p>' + h[1] + '</p>' +
+      "<p>È la versione semplificata del Circular Commuting Canvas, nata con la tesi. Nessun dato lascia il tuo browser: se ricarichi la pagina, i campi si azzerano.</p>" +
+      "<div class=\"help-fw\"><strong>La beta 2.0</strong>Segue l'articolo di ricerca: calcola energia ed emissioni per mezzo con le equazioni del paper, propone solo interventi coerenti con le inefficienze emerse e raccoglie in forma anonima le valutazioni dei mobility manager. <a href=\"../beta/\">Prova la beta</a></div>";
+    last = document.activeElement;
+    drawer.classList.add('open');
+    setTimeout(function () { drawer.querySelector('.help-close').focus(); }, 60);
+  }
+  function close() { drawer.classList.remove('open'); if (last) last.focus(); }
+  document.getElementById('help-fab').addEventListener('click', open);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close-help]'), function (b) { b.addEventListener('click', close); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && drawer.classList.contains('open')) close(); });
+})();
+</script>
+</body>
+</html>

@@ -2,43 +2,66 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Circular Commuting Framework &amp; Canvas 2.0 beta</title>
-<meta name="description" content="Diagnosi energy-aware della mobilità casa-lavoro e prioritizzazione degli interventi. Versione 2.0 in validazione con i mobility manager.">
-<link rel="preload" href="../assets/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="../assets/fonts/inter-800.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Circular Commuting · Beta 2.0</title>
+<meta name="description" content="Scopri dove si spreca energia negli spostamenti casa-lavoro della tua sede e quali interventi fare per primi. Versione in validazione scientifica.">
+<link rel="preload" href="../assets/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/css/ccf.css">
 <link rel="stylesheet" href="beta.css">
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap top-row">
-    <a class="backlink" href="../" data-i18n="hero.v1">← Versione 1.0</a>
-    <div class="lang" role="group" aria-label="Lingua / Language">
-      <button type="button" data-lang="it" aria-pressed="true">ITA</button><button type="button" data-lang="en" aria-pressed="false">ENG</button>
+<header class="topbar solid">
+  <div class="container row">
+    <a class="brand" id="brand-link" href="../">
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M22.6 10.2A9.5 9.5 0 1 0 23.2 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M23.6 5.8v4.6H19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="14" r="2.8" fill="#586CC9"/></svg>
+      <span class="brand-text">Circular Commuting</span>
+    </a>
+    <div class="rail" id="rail" hidden></div>
+    <div class="actions">
+      <div class="lang-switch" role="group" aria-label="Lingua / Language">
+        <button type="button" data-lang="it" aria-pressed="true">IT</button><button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
     </div>
-  </div>
-  <div class="wrap hero">
-    <div class="eyebrow"><span class="beta-pill">2.0 beta</span><span data-i18n="hero.eyebrow">nuova versione in validazione</span></div>
-    <h1>Circular Commuting <span class="c">:</span><br>Framework &amp; Canvas 2.0</h1>
-    <p class="sub" data-i18n="hero.sub">Diagnosi energy-aware della mobilità casa-lavoro: dall'inefficienza all'intervento prioritario.</p>
   </div>
 </header>
 
-<nav class="stepper" id="stepper" aria-label="Canvas"></nav>
-
-<main class="wrap" id="app">
-  <noscript><p class="empty">Per usare il Canvas serve JavaScript. / JavaScript is required to use the Canvas.</p></noscript>
+<main id="app" class="app">
+  <noscript><p class="container">Per usare la beta serve JavaScript. / JavaScript is required to use the beta.</p></noscript>
 </main>
 
-<footer>
-  <div><span data-i18n="footer.beta"></span> · <button type="button" class="linkbtn inline" data-action="privacy" data-i18n="footer.privacy">Informativa privacy</button> · <a href="../" data-i18n="footer.v1">Versione 1.0</a></div>
-  <div class="made">made by <a href="https://linktr.ee/corazzini" target="_blank" rel="noopener">Enrico Emanuele Corazzini</a></div>
+<footer class="site-footer">
+  <div class="container row">
+    <span data-i18n="footer.version">Beta 2.0</span>
+    <span class="foot-links">
+      <button type="button" class="linklike" data-act="privacy" data-i18n="footer.privacy">Informativa privacy</button>
+      <a href="../semplificato/" data-i18n="footer.lite">Versione semplificata</a>
+      <span>made by <a href="https://linktr.ee/corazzini" target="_blank" rel="noopener">Enrico Emanuele Corazzini</a></span>
+    </span>
+  </div>
 </footer>
+
+<button type="button" class="help-fab" id="help-fab" aria-haspopup="dialog" aria-controls="help-drawer">
+  <span class="pulse"></span>
+  <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .9-1 1.6v.5"/><path d="M12 16.8h.01"/></svg>
+  <span class="sr-only">Cosa c'è in questa schermata?</span>
+</button>
+<div class="help-drawer" id="help-drawer" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="help-backdrop" data-close-help></div>
+  <aside class="help-panel">
+    <div class="help-head">
+      <span class="eyebrow"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .9-1 1.6v.5"/><path d="M12 16.8h.01"/></svg><span id="help-eyebrow">Cosa c'è a schermo</span></span>
+      <button type="button" class="help-close" data-close-help aria-label="Chiudi"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="help-body" id="help-body"></div>
+  </aside>
+</div>
 
 <dialog id="privacy" aria-labelledby="privacy-title"></dialog>
 <div id="print-root"></div>
 
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/content.js"></script>
 <script src="engine.js"></script>
 <script src="i18n.js"></script>
 <script src="app.js"></script>

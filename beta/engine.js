@@ -13,7 +13,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const VERSION = '2.0.0-beta.1';
+  const VERSION = '2.0.0-beta.2';   // beta.2: nuova interfaccia e questionario; formule invariate rispetto a beta.1
 
   const WORK_DAYS_YEAR = 220;         // giorni lavorativi di riferimento (tesi, esempio §6.4)
   const OBSERVED_THRESHOLD = 41;      // da fascia "media" in su un'inefficienza è osservata

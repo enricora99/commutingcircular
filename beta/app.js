@@ -1,22 +1,37 @@
 /*
- * Circular Commuting 2.0 beta — interfaccia guidata del Canvas.
+ * Circular Commuting 2.0 beta — interfaccia a domande singole.
  *
- * Lo stato vive nel browser (localStorage). Dopo il consenso, i dati anonimi partono verso il
- * foglio di validazione tramite la web app Apps Script (_backend/Code.js). Nome dell'organizzazione
- * e della sede non escono mai dal browser.
+ * Ogni schermata è una domanda. Le schermate sono raggruppate in capitoli che seguono gli otto blocchi
+ * del Canvas. Lo stato vive nel browser; dopo il consenso, le risposte anonime partono verso il foglio di
+ * validazione tramite la web app Apps Script (_backend/Code.js). Il nome dell'organizzazione resta locale.
  */
 (function () {
   'use strict';
 
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwko-WdJPu1TeI5oevLKS0PgMGf6oMQNX6nbP4Vu_gwgJ-8NFQiGi8eakfWbHAekQc/exec';
   const STORE_KEY = 'ccf-beta-2';
-  const LAST_STEP = 9;
-  const RESULTS_STEP = 8;
+  const UI_VERSION = '2.1';
   const I18N = window.CCF_I18N;
-  const REGIONS = ['Abruzzo', 'Basilicata', 'Calabria', 'Campania', 'Emilia-Romagna', 'Friuli-Venezia Giulia', 'Lazio', 'Liguria', 'Lombardia', 'Marche', 'Molise', 'Piemonte', 'Puglia', 'Sardegna', 'Sicilia', 'Toscana', 'Trentino-Alto Adige', 'Umbria', "Valle d'Aosta", 'Veneto'];
-  const BAND_RANGES = ['0–20', '21–40', '41–60', '61–80', '81–100'];
+  const CONTENT = window.CCF_CONTENT;
+  const ICON = window.CCF_ICON;
+  const SCALE = window.CCF_SCALE;
   const CODES = ['I1', 'I2', 'I3', 'I4', 'I5'];
+  const DIRECT = ['I2', 'I3'];
   const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  const TOTAL_CH = 9;
+  const RESULTS_CH = 8;
+  const REGIONS = [
+    ['Emilia-Romagna', 'Friuli-Venezia Giulia', 'Liguria', 'Lombardia', 'Piemonte', 'Trentino-Alto Adige', "Valle d'Aosta", 'Veneto'],
+    ['Lazio', 'Marche', 'Toscana', 'Umbria'],
+    ['Abruzzo', 'Basilicata', 'Calabria', 'Campania', 'Molise', 'Puglia', 'Sardegna', 'Sicilia']
+  ];
+  const CHAPTER_FACT = { 1: 'reporting', 2: 'remote', 3: 'occupancy', 4: 'bike', 5: 'parking', 6: 'wellbeing', 7: 'package', 9: 'optimal' };
+  const MODE_ICON = { car_solo: 'carSolo', car_pool: 'carPool', car_ev: 'carEv', moto: 'moto', shuttle: 'shuttle', bus: 'bus', bus_el: 'busEv', train: 'train', ebike: 'ebike', active: 'bike' };
+  const MODE_COLOR = { car_solo: '#1D2130', car_pool: '#383F5D', car_ev: '#586CC9', moto: '#6B7280', shuttle: '#3F51A8', bus: '#7C8FDB', bus_el: '#9DB0E8', train: '#B9C8F2', ebike: '#14B8A6', active: '#5EEAD4' };
+  const GCS_ICON = ['person', 'users', 'truck', 'columns', 'network'];
+  const INEFF_ICON = { I1: 'i1', I2: 'i2', I3: 'i3', I4: 'i4', I5: 'i5' };
+  const CI_REF = CCF.MODES[0].e / CCF.MODES[0].o * CCF.PHI.fossil;   // auto termica con una sola persona
+  const RADAR_SHORT = { I1: 'I1', I2: 'I2', I3: 'I3', I4: 'I4', I5: 'I5', CI: 'CI', DATA: 'DMS', GOV: 'GCS' };
 
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
@@ -39,46 +54,85 @@
 
   function fresh() {
     return {
-      schema: 1, sid: newSid(), step: 0, maxStep: 0, consent: false, hp: '',
+      schema: 2, sid: newSid(), pos: 'intro', maxCh: 0, consent: false, hp: '',
       profile: { orgName: '', siteName: '', orgType: '', sector: '', employees: '', region: '', shiftPct: '', pscl: '', dms: '' },
       mns: { qe: '', qp: '', qr: '' },
-      baseline: { oneWay: '', days: '220', modes: {} },
+      baseline: { oneWay: '', days: '', daysWeek: '', modes: {} },
       acc: Array(7).fill(''), cdr: Array(5).fill(''),
-      direct: { I2: '', I3: '' }, directNotes: { I2: '', I3: '' }, overrides: {},
+      direct: { I2: '', I3: '' }, directNotes: { I2: '', I3: '' }, overrides: {}, skipped: {},
       interventions: {}, monitoring: {},
       feedback: {}, contact: { ok: false, email: '' },
       timings: {}, reached: {}, rev: 0, sentHash: '', code: '', outbox: []
     };
   }
 
+  // Le analisi iniziate con la prima versione dell'interfaccia (schema 1) conservano i dati.
+  function migrate(old) {
+    const s = Object.assign(fresh(), old);
+    const byStep = ['intro', 'ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'results', 'ch9'];
+    s.schema = 2;
+    s.pos = old.code ? 'thanks' : (byStep[old.step] || 'intro');
+    s.maxCh = old.maxStep || 0;
+    const days = CCF.num(old.baseline && old.baseline.days);
+    s.baseline = Object.assign({ oneWay: '', days: '', daysWeek: '', modes: {} }, old.baseline, { daysWeek: days ? String(Math.round(days / 44 * 2) / 2) : '' });
+    s.skipped = {};
+    return s;
+  }
+
   let S = store.load();
-  if (!S || S.schema !== 1) S = fresh();
+  if (!S || (S.schema !== 1 && S.schema !== 2)) S = fresh();
+  else if (S.schema === 1) S = migrate(S);
   if (!Array.isArray(S.outbox)) S.outbox = [];
+  if (!S.skipped) S.skipped = {};
   let lang = pickLang();
   let R = evaluate();
   let enteredAt = Date.now();
   let saveTimer = null;
+  let autoTimer = null;
 
   function pickLang() {
     const q = new URLSearchParams(location.search).get('lang');
     if (q === 'en' || q === 'it') return q;
-    return S.lang === 'en' ? 'en' : 'it';
+    if (S.lang === 'en' || S.lang === 'it') return S.lang;
+    try { return localStorage.getItem('ccf-lang') === 'en' ? 'en' : 'it'; } catch (e) { return 'it'; }
   }
 
   function persist() {
     S.lang = lang;
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => store.save(S), 200);
+    saveTimer = setTimeout(() => store.save(S), 150);
+  }
+
+  // Distanze proposte per bici, piedi e micromobilità quando la media della sede è più alta.
+  function defaultOneWay(id) {
+    const avg = CCF.num(S.baseline.oneWay);
+    if (avg === null) return null;
+    if (id === 'active') return Math.min(avg, 3);
+    if (id === 'ebike') return Math.min(avg, 7);
+    return avg;
   }
 
   function engineState() {
+    const modes = {};
+    CCF.MODES.forEach(m => {
+      const src = Object.assign({}, S.baseline.modes[m.id] || {});
+      if (CCF.num(src.oneWay) === null && (m.id === 'active' || m.id === 'ebike')) src.oneWay = defaultOneWay(m.id);
+      modes[m.id] = src;
+    });
+    const dw = CCF.num(S.baseline.daysWeek);
+    const cdr = S.cdr.slice();
+    if (String(S.profile.shiftPct) === '0' && cdr[3] === '') cdr[3] = 'nd';   // senza turni la voce non si applica
     const interventions = {};
     Object.keys(S.interventions).forEach(id => {
       const u = S.interventions[id];
       const pct = CCF.num(u.leverPct);
       interventions[id] = Object.assign({}, u, { lever: pct === null ? null : pct / 100 });
     });
-    return { profile: S.profile, mns: S.mns, baseline: S.baseline, acc: S.acc, cdr: S.cdr, direct: S.direct, overrides: S.overrides, interventions };
+    return {
+      profile: S.profile, mns: S.mns,
+      baseline: { oneWay: S.baseline.oneWay, days: dw !== null ? dw * 44 : S.baseline.days, modes },
+      acc: S.acc, cdr, direct: S.direct, overrides: S.overrides, interventions
+    };
   }
 
   function evaluate() { return CCF.evaluate(engineState()); }
@@ -91,14 +145,11 @@
     if (typeof v === 'string' && vars) v = v.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
     return v;
   }
-
   const esc = s => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
   function fmt(n, d) {
     if (n === null || n === undefined || !isFinite(n)) return '—';
     return Number(n).toLocaleString(lang === 'it' ? 'it-IT' : 'en-GB', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
   }
-
   const round = (v, d) => (v === null || v === undefined || !isFinite(v) ? null : Math.round(v * Math.pow(10, d)) / Math.pow(10, d));
   const getPath = path => path.split('.').reduce((o, k) => (o === undefined || o === null ? undefined : o[k]), S);
   function setPath(path, value) {
@@ -107,567 +158,684 @@
     keys.slice(0, -1).forEach(k => { if (o[k] === undefined || o[k] === null || typeof o[k] !== 'object') o[k] = {}; o = o[k]; });
     o[keys[keys.length - 1]] = value;
   }
-  const fid = path => 'f-' + path.replace(/[^\w]/g, '-');
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const entries = obj => Object.keys(obj).map(k => [k, obj[k]]);
+  const has = v => v !== '' && v !== undefined && v !== null;
 
-  const mnsBand = v => t('b2.bands')[v < 50 ? 0 : v < 80 ? 1 : 2];
-  const fourBand = v => (v < 40 ? 0 : v < 60 ? 1 : v < 80 ? 2 : 3);
+  // ---------- definizione delle schermate ----------
+  function screens() {
+    const list = [];
+    const add = s => list.push(s);
+    const o = t('options');
+    const q = t('q');
+
+    add({ id: 'intro', ch: 0, kind: 'intro', help: 'intro', answered: () => S.consent });
+
+    // Capitolo 1 · la sede
+    add({ id: 'ch1', ch: 1, kind: 'chapter' });
+    add({ id: 'orgType', ch: 1, kind: 'choice', path: 'profile.orgType', layout: 'grid-5', auto: true, help: 'sample', title: q.orgType.title,
+      options: entries(o.orgType).map(([v, [ic, l]]) => ({ value: v, icon: ic, label: l })) });
+    add({ id: 'sector', ch: 1, kind: 'choice', path: 'profile.sector', layout: 'grid-4', auto: true, help: 'sample', title: q.sector.title,
+      options: entries(o.sector).map(([v, [ic, l]]) => ({ value: v, icon: ic, label: l })) });
+    add({ id: 'employees', ch: 1, kind: 'number', path: 'profile.employees', help: 'employees', title: q.employees.title, sub: q.employees.sub,
+      unit: t('ui.people'), chips: [50, 100, 250, 500, 1000], min: 1, max: 100000, answered: () => CCF.num(S.profile.employees) >= 1 });
+    add({ id: 'region', ch: 1, kind: 'region', path: 'profile.region', auto: true, help: 'sample', title: q.region.title });
+    add({ id: 'shifts', ch: 1, kind: 'percent', path: 'profile.shiftPct', help: 'shifts', title: q.shifts.title, sub: q.shifts.sub, chips: [0, 10, 25, 50, 75, 100] });
+    add({ id: 'pscl', ch: 1, kind: 'choice', path: 'profile.pscl', layout: 'grid-3', auto: true, help: 'pscl', title: q.pscl.title, sub: q.pscl.sub,
+      options: entries(o.pscl).map(([v, [ic, l]]) => ({ value: v, icon: ic, label: l })) });
+    add({ id: 'dms', ch: 1, kind: 'choice', path: 'profile.dms', layout: 'grid-3', auto: true, help: 'dms', title: q.dms.title, sub: q.dms.sub,
+      options: o.dms.map(([ic, l, sub], i) => ({ value: String(i), icon: ic, label: l, sub, key: i })) });
+
+    // Capitolo 2 · presenza
+    add({ id: 'ch2', ch: 2, kind: 'chapter' });
+    add({ id: 'mns', ch: 2, kind: 'mns', help: 'mns', title: q.mns.title, sub: q.mns.sub, answered: () => R.mns.valid });
+    add({ id: 'daysWeek', ch: 2, kind: 'choice', path: 'baseline.daysWeek', layout: 'grid-5 days', auto: true, help: 'daysWeek', title: q.daysWeek.title, sub: q.daysWeek.sub,
+      options: [1, 2, 3, 4, 5].map(d => ({ value: String(d), big: String(d), label: d === 1 ? q.daysWeek.unit[0] : q.daysWeek.unit[1] })) });
+
+    // Capitolo 3 · spostamenti
+    add({ id: 'ch3', ch: 3, kind: 'chapter' });
+    add({ id: 'distance', ch: 3, kind: 'distance', path: 'baseline.oneWay', help: 'distance', title: q.distance.title, sub: q.distance.sub,
+      chips: [5, 10, 15, 20, 30, 50], answered: () => CCF.num(S.baseline.oneWay) > 0 });
+    add({ id: 'modes', ch: 3, kind: 'modes', help: 'modes', title: q.modes.title, answered: () => R.baseline.N > 0 });
+    if (R.baseline.rows.filter(r => r.n > 0).length >= 2) {
+      add({ id: 'modeDistances', ch: 3, kind: 'modeDistances', help: 'modeDistances', title: q.modeDistances.title, sub: q.modeDistances.sub, answered: () => true });
+    }
+
+    // Capitolo 4 · alternative all'auto
+    add({ id: 'ch4', ch: 4, kind: 'chapter' });
+    q.acc.forEach((item, k) => add({ id: 'acc' + k, ch: 4, kind: 'scale', arr: 'acc', k, auto: true, help: 'acc', helpVars: { k: k + 1 }, icon: item.icon, title: item.title, items: item.options }));
+
+    // Capitolo 5 · il ruolo dell'auto
+    add({ id: 'ch5', ch: 5, kind: 'chapter' });
+    q.cdr.forEach((item, k) => {
+      if (k === 3 && String(S.profile.shiftPct) === '0') return;
+      add({ id: 'cdr' + k, ch: 5, kind: 'scale', arr: 'cdr', k, auto: true, help: 'cdr', helpVars: { k: k + 1 }, icon: item.icon, title: item.title, items: item.options });
+    });
+
+    // Capitolo 6 · dove si spreca
+    add({ id: 'ch6', ch: 6, kind: 'chapter' });
+    CODES.forEach(code => add({ id: code, ch: 6, kind: 'ineff', code, help: code, title: q.ineff[code].title, answered: () => ineffAnswered(code) }));
+
+    // Capitolo 7 · cosa fare
+    add({ id: 'ch7', ch: 7, kind: 'chapter' });
+    add({ id: 'ivSelect', ch: 7, kind: 'ivSelect', help: 'ivSelect', answered: () => true });
+    const chosen = orderedCandidates().filter(x => x.selected);
+    chosen.forEach((x, i) => add({ id: 'iv:' + x.id, ch: 7, kind: 'iv', ivId: x.id, k: i + 1, n: chosen.length, help: 'iv', answered: () => { const y = ivResult(x.id); return !!(y && y.ipi !== null); } }));
+
+    // Capitolo 8 · risultati
+    add({ id: 'results', ch: 8, kind: 'results', help: 'results', answered: () => true });
+
+    // Capitolo 9 · valutazione
+    add({ id: 'ch9', ch: 9, kind: 'chapter' });
+    ['f1', 'f2', 'f3', 'f4', 'f5', 'f6'].forEach(f => add({ id: f, ch: 9, kind: 'truth', path: 'feedback.' + f, auto: true, help: 'truth', title: q.truth.items[f] }));
+    add({ id: 'c1', ch: 9, kind: 'yesno', path: 'feedback.c1', textPath: 'feedback.c1text', help: 'c1', title: q.c1.title, textLabel: q.c1.text });
+    add({ id: 'c2', ch: 9, kind: 'yesno', path: 'feedback.c2', textPath: 'feedback.c2text', help: 'c2', title: q.c2.title, textLabel: q.c2.text });
+    add({ id: 'role', ch: 9, kind: 'choice', path: 'feedback.role', layout: 'grid-4', auto: true, help: 'profile', title: q.role.title,
+      options: entries(q.role.options).map(([v, l]) => ({ value: v, icon: o.roleIcons[v], label: l })) });
+    add({ id: 'experience', ch: 9, kind: 'choice', path: 'feedback.experience', layout: 'grid-4', auto: true, help: 'profile', title: q.experience.title,
+      options: entries(q.experience.options).map(([v, l], i) => ({ value: v, scale: i + 1, label: l })) });
+    add({ id: 'final', ch: 9, kind: 'final', help: 'final', answered: () => true });
+    add({ id: 'thanks', ch: 10, kind: 'thanks', help: 'thanks', answered: () => true });
+    return list;
+  }
+
+  function answered(sc) {
+    if (sc.answered) return !!sc.answered();
+    if (sc.kind === 'chapter') return true;
+    if (sc.kind === 'scale') return has(S[sc.arr][sc.k]);
+    if (sc.path) return has(getPath(sc.path));
+    return true;
+  }
+
+  function ineffAnswered(code) {
+    if (S.skipped[code]) return true;
+    if (DIRECT.includes(code)) return has(S.direct[code]);
+    return R.diagnosis[code].value !== null;
+  }
+
+  function orderedCandidates() {
+    const iv = R.interventions;
+    const order = iv.observed.slice().sort((a, b) => R.diagnosis[b].value - R.diagnosis[a].value);
+    const out = [];
+    order.forEach(code => iv.list.filter(x => x.ineff === code).sort((a, b) => (a.role === b.role ? 0 : a.role === 'primary' ? -1 : 1)).forEach(x => out.push(x)));
+    return out;
+  }
+  const ivResult = id => R.interventions.list.find(x => x.id === id);
+
+  function chapterCount(list, ch) { return list.filter(s => s.ch === ch && s.kind !== 'chapter').length; }
 
   // ---------- componenti ----------
-  function field(label, control, hint, path) {
-    return `<div class="field"><label${path ? ` for="${fid(path)}"` : ''}>${esc(label)}${hint ? ` <span class="hint">${esc(hint)}</span>` : ''}</label>${control}</div>`;
-  }
-  function numInput(path, attrs) {
-    const v = getPath(path);
-    return `<input type="number" inputmode="decimal" id="${fid(path)}" data-bind="${path}" value="${esc(v === undefined || v === null ? '' : v)}" ${attrs || ''}>`;
-  }
-  function textInput(path, attrs) {
-    const v = getPath(path);
-    return `<input type="text" id="${fid(path)}" data-bind="${path}" value="${esc(v === undefined || v === null ? '' : v)}" ${attrs || ''}>`;
-  }
-  function selectInput(path, options, attrs, placeholder) {
-    const raw = getPath(path);
-    const v = raw === undefined || raw === null ? '' : String(raw);
-    const first = placeholder === false ? '' : `<option value="">${esc(t('common.select'))}</option>`;
-    return `<select id="${fid(path)}" data-bind="${path}" ${attrs || ''}>${first}${options.map(([val, lab]) => `<option value="${esc(val)}"${String(val) === v ? ' selected' : ''}>${esc(lab)}</option>`).join('')}</select>`;
-  }
-  function block(n, key, body) {
-    return `<section class="block"><div class="block-head"><span class="bn">${n}</span><div class="bt">${esc(t(key + '.title'))}<span class="bq">${esc(t(key + '.q'))}</span></div></div><div class="block-body">${body}</div></section>`;
-  }
-  function stepNav(label) {
-    return `<div class="stepnav">
-      ${S.step > 0 ? `<button type="button" class="btn ghost" data-action="back">${esc(t('nav.back'))}</button>` : '<span></span>'}
-      <span class="stepnav-mid">${esc(t('nav.stepOf', { n: S.step, t: LAST_STEP }))} · ${esc(t('nav.saved'))}</span>
-      <button type="button" class="btn primary" data-action="next">${esc(label || t('nav.next'))}</button>
-    </div>`;
-  }
-  function scoreHTML(value, unit, name, cls, reco, bar, color) {
-    return `<div class="val">${value}<span class="u">${unit}</span></div><div class="band"><div class="name ${cls}">${esc(name)}</div><div class="reco">${esc(reco)}</div></div>` +
-      (bar === null ? '' : `<div class="bar"><i style="width:${Math.max(0, Math.min(100, bar))}%;background:${color}"></i></div>`);
-  }
-  function scoreOut(el, html) {
-    if (!el) return;
-    el.style.display = html ? 'flex' : 'none';
-    el.innerHTML = html || '';
-  }
-  const toggleWarn = (sel, show) => { const el = $(sel); if (el) el.classList.toggle('show', !!show); };
-  const authorsLine = () => (window.CCF_AUTHORS && window.CCF_AUTHORS.length
-    ? `<p class="authors" style="margin-top:12px"><span class="mono">${esc(t('research.authors'))}:</span> ${esc(window.CCF_AUTHORS.join(', '))}</p>` : '');
-
-  // ---------- passaggi ----------
-  function stepIntro() {
-    const cards = t('intro.cards').map(c => `<div class="icard"><div class="icard-t">${esc(c.t)}</div><p>${esc(c.d)}</p></div>`).join('');
-    const resume = S.maxStep > 0 && S.consent ? `<div class="resume"><p>${esc(t('intro.resume', { step: t('steps')[S.maxStep] }))}</p><div class="actions">
-        <button type="button" class="btn primary" data-action="go" data-step="${S.maxStep}">${esc(t('intro.resumeBtn'))}</button>
-        <button type="button" class="btn ghost" data-action="restart">${esc(t('intro.restartBtn'))}</button></div></div>` : '';
-    return `<section class="intro">
-      <h2 class="sec">${esc(t('intro.title'))}</h2>
-      <p class="lead">${esc(t('intro.lead'))}</p>
-      ${resume}
-      <div class="icards">${cards}</div>
-      <p class="tip">${esc(t('intro.dataTip'))}</p>
-      <div class="research">
-        <div class="eyebrow">${esc(t('research.title'))}</div>
-        <p>${esc(t('research.p1'))}</p><p>${esc(t('research.p2'))}</p><p>${esc(t('research.p3'))}</p>
-        ${authorsLine()}
-      </div>
-      <div class="consent">
-        <label class="check"><input type="checkbox" data-bind="consent"${S.consent ? ' checked' : ''}><span>${esc(t('consent.label'))}</span></label>
-        <button type="button" class="linkbtn" data-action="privacy">${esc(t('consent.link'))}</button>
-        <input type="text" class="hp" name="website" data-bind="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-      </div>
-      <div class="stepnav">
-        <a class="btn ghost" href="../">${esc(t('hero.v1'))}</a>
-        <button type="button" class="btn primary" data-action="next" id="start-btn"${S.consent ? '' : ' disabled'}>${esc(t('consent.start'))}</button>
-      </div>
-      <p class="need" id="consent-need"${S.consent ? ' hidden' : ''}>${esc(t('consent.need'))}</p>
-    </section>`;
+  function head(sc, extra) {
+    return `<header class="q-head">
+      ${sc.icon ? `<span class="q-ico">${ICON(sc.icon)}</span>` : ''}
+      ${sc.eyebrow ? `<span class="eyebrow">${esc(sc.eyebrow)}</span>` : ''}
+      <h1 class="q-title" tabindex="-1">${esc(sc.title)}</h1>
+      ${sc.sub ? `<p class="q-sub">${esc(sc.sub)}</p>` : ''}${extra || ''}</header>`;
   }
 
-  function stepProfile() {
-    const b = k => t('b1.' + k);
-    const p = 'profile.';
-    const regions = REGIONS.map(r => [r, r]).concat([['abroad', b('abroad')]]);
-    const levels = b('dmsLevels').map((l, i) => {
-      const on = String(S.profile.dms) === String(i);
-      return `<label class="radiocard${on ? ' on' : ''}"><input type="radio" name="dms" value="${i}" data-bind="profile.dms"${on ? ' checked' : ''}>
-        <span class="rc-n">${i}</span><span class="rc-b"><b>${esc(l.c)}</b><span>${esc(b('dmsAllows'))}: ${esc(l.a)}</span></span></label>`;
-    }).join('');
-    return block(1, 'b1', `
-      <div class="grid2">
-        ${field(b('orgName'), textInput(p + 'orgName', 'autocomplete="organization"'), b('localHint'), p + 'orgName')}
-        ${field(b('siteName'), textInput(p + 'siteName'), b('localHint'), p + 'siteName')}
-        ${field(b('orgType'), selectInput(p + 'orgType', entries(b('orgTypes'))), '', p + 'orgType')}
-        ${field(b('sector'), selectInput(p + 'sector', entries(b('sectors'))), '', p + 'sector')}
-        ${field(b('employees'), numInput(p + 'employees', 'min="1" step="1"'), '', p + 'employees')}
-        ${field(b('region'), selectInput(p + 'region', regions), '', p + 'region')}
-        ${field(b('shiftPct'), numInput(p + 'shiftPct', 'min="0" max="100" step="1"'), '', p + 'shiftPct')}
-        ${field(b('pscl'), selectInput(p + 'pscl', entries(b('psclOpts'))), '', p + 'pscl')}
-      </div>
-      <fieldset class="radiocards"><legend>${esc(b('dmsTitle'))}</legend>${levels}</fieldset>
-      <div class="warn" id="dms-warn">${esc(b('dmsWarn'))}</div>`) + stepNav();
+  function optButton(path, o, i, current, extraAttr) {
+    const on = String(current) === String(o.value);
+    const inner = `${o.icon ? ICON(o.icon, 'opt-ico') : ''}${o.big ? `<span class="opt-big">${esc(o.big)}</span>` : ''}${o.scale ? SCALE(o.scale) : ''}
+      <span class="opt-label">${esc(o.label)}</span>${o.sub ? `<span class="opt-sub">${esc(o.sub)}</span>` : ''}${o.tag ? `<span class="opt-tag">${esc(o.tag)}</span>` : ''}`;
+    return `<button type="button" class="opt" data-choose="${esc(path)}" data-value="${esc(o.value)}" aria-pressed="${on}" ${extraAttr || ''}>
+      ${inner}<span class="opt-key">${o.key !== undefined ? o.key : i + 1}</span><span class="opt-check">${ICON('check')}</span></button>`;
   }
 
-  function stepMNS() {
-    const b = k => t('b2.' + k);
-    return block(2, 'b2', `
-      <div class="grid3">
-        ${field(b('qe'), numInput('mns.qe', 'min="0" max="100" step="1"'), '', 'mns.qe')}
-        ${field(b('qp'), numInput('mns.qp', 'min="0" max="100" step="1"'), '', 'mns.qp')}
-        ${field(b('qr'), numInput('mns.qr', 'min="0" max="100" step="1"'), '', 'mns.qr')}
-      </div>
-      <div class="formula">${esc(b('formula'))}</div>
-      <p class="sumline" id="mns-sum"></p>
-      <div class="warn" id="mns-warn">${esc(b('sumWarn'))}</div>
-      <div class="scoreout" id="mns-out"></div>
-      <p class="note">${esc(b('note'))}</p>`) + stepNav();
+  function seaLayer(cls) {
+    return `<div class="sea ${cls || ''}" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+      <svg class="waves w1" viewBox="0 0 2880 240" preserveAspectRatio="none"><path d="M0 120C240 60 480 180 720 120S1200 60 1440 120 1920 180 2160 120 2640 60 2880 120V240H0Z"/></svg>
+      <svg class="waves w2" viewBox="0 0 2880 240" preserveAspectRatio="none"><path d="M0 140C180 100 540 190 720 140S1260 90 1440 140 1980 190 2160 140 2700 90 2880 140V240H0Z"/></svg><div class="grain"></div></div>`;
   }
 
-  function stepBaseline() {
-    const b = k => t('b3.' + k);
-    const c = b('cols'), pc = b('paramCols'), k = b('kpi');
-    const rows = CCF.MODES.map(m => {
-      const base = 'baseline.modes.' + m.id + '.';
-      return `<tr><th scope="row">${esc(t('modes.' + m.id))}</th>
-        <td>${numInput(base + 'n', `min="0" step="1" aria-label="${esc(c.n)}"`)}</td>
-        <td>${numInput(base + 'oneWay', `min="0" step="0.1" data-ph="oneWay" aria-label="${esc(c.km)}"`)}</td>
-        <td>${numInput(base + 'days', `min="0" max="366" step="1" data-ph="days" aria-label="${esc(c.days)}"`)}</td></tr>`;
-    }).join('');
-    const params = CCF.MODES.map(m => {
-      const base = 'baseline.modes.' + m.id + '.';
-      return `<tr><th scope="row">${esc(t('modes.' + m.id))}</th>
-        <td>${numInput(base + 'e', `min="0" step="0.001" placeholder="${m.e}" aria-label="${esc(pc.e)}"`)}</td>
-        <td>${numInput(base + 'o', `min="0" step="0.1" placeholder="${m.o}" aria-label="${esc(pc.o)}"`)}</td>
-        <td>${numInput(base + 'k', `min="1" step="1" placeholder="${m.k}" aria-label="${esc(pc.k)}"`)}</td>
-        <td>${numInput(base + 'phi', `min="0" step="1" placeholder="${CCF.PHI[m.carrier]}" aria-label="${esc(pc.phi)}"`)}</td>
-        <td class="mono" id="lf-${m.id}"></td></tr>`;
-    }).join('');
-    return block(3, 'b3', `
-      <div class="grid2">
-        ${field(b('oneWay'), numInput('baseline.oneWay', 'min="0" step="0.1"'), '', 'baseline.oneWay')}
-        ${field(b('days'), numInput('baseline.days', 'min="0" max="366" step="1"'), b('daysHint'), 'baseline.days')}
-      </div>
-      <p class="lead small">${esc(b('lead'))}</p>
-      <div class="tablewrap"><table class="grid-table">
-        <thead><tr><th>${esc(c.mode)}</th><th>${esc(c.n)}</th><th>${esc(c.km)}</th><th>${esc(c.days)}</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>
-      <p class="sumline" id="bl-sum"></p>
-      <details class="params"><summary>${esc(b('params'))}</summary>
-        <p class="note">${esc(b('paramsNote'))}</p>
-        <div class="tablewrap"><table class="grid-table">
-          <thead><tr><th>${esc(c.mode)}</th><th>${esc(pc.e)}</th><th>${esc(pc.o)}</th><th>${esc(pc.k)}</th><th>${esc(pc.phi)}</th><th>${esc(pc.lf)}</th></tr></thead>
-          <tbody>${params}</tbody></table></div>
-      </details>
-      <div class="kpibox">
-        <div class="kpitile"><div class="k">${esc(k.A)}</div><div class="v" id="kpi-A">—</div><div class="u">${esc(k.Aunit)}</div></div>
-        <div class="kpitile"><div class="k">${esc(k.EI)}</div><div class="v" id="kpi-EI">—</div><div class="u">${esc(k.EIunit)}</div></div>
-        <div class="kpitile"><div class="k">${esc(k.CI)}</div><div class="v" id="kpi-CI">—</div><div class="u">${esc(k.CIunit)}</div></div>
-        <div class="kpitile"><div class="k">${esc(k.G)}</div><div class="v" id="kpi-G">—</div><div class="u">${esc(k.Gunit)}</div></div>
-      </div>
-      <p class="empty" id="bl-empty">${esc(b('empty'))}</p>
-      <div class="formula">${esc(b('formula'))}</div>`) + stepNav();
+  function factCard(key) {
+    const f = CONTENT.facts[key];
+    if (!f) return '';
+    const x = f[lang];
+    return `<article class="fact"><span class="eyebrow">${ICON('bulb')}${esc(t('ui.factLabel'))}</span>
+      ${f.icon ? `<div class="fact-big fact-icon">${ICON(f.icon)}</div>` : `<div class="fact-big">${esc(f.big)}</div>`}<p class="fact-text">${esc(x.text)}</p><p class="fact-src">${esc(x.src)}</p></article>`;
   }
 
-  function stepComposite(n, key, arr) {
-    const rows = t(key + '.items').map(([label, opts], i) => {
-      const path = arr + '.' + i;
-      const options = opts.map((o, j) => [String(5 - j), (5 - j) + ' · ' + o]).concat([['nd', t('common.nd')]]);
-      return `<div class="scorerow"><label class="lbl" for="${fid(path)}">${i + 1}. ${esc(label)}</label>${selectInput(path, options)}</div>`;
-    }).join('');
-    return block(n, key, `
-      <div class="formula">${esc(t(key + '.formula'))}</div>
-      ${rows}
-      <p class="sumline" id="${arr}-cov"></p>
-      <div class="warn" id="${arr}-low">${esc(t('common.lowRel'))}</div>
-      <div class="scoreout" id="${arr}-out"></div>
-      ${key === 'b5' ? `<p class="note">${esc(t('b5.joint'))}</p>` : ''}`) + stepNav();
+  function authorsGrid() {
+    return `<div class="authors">${CONTENT.authors.map(a => `<div class="author">
+      <span class="avatar" aria-hidden="true">${esc(a.initials)}</span>
+      <div><div class="author-name">${esc(a.name)}</div><div class="author-role">${esc(a.role[lang])}</div><p>${esc(a.bio[lang])}</p></div></div>`).join('')}</div>`;
   }
 
-  function stepDiagnosis() {
-    const b = k => t('b6.' + k);
-    const bandOpts = BAND_RANGES.map((r, i) => [String(CCF.BAND_VALUES[i]), r + ' · ' + t('common.bands')[i]]);
-    const rows = CODES.map(code => {
-      const head = `<div class="diag-head"><span class="diag-code">${code}</span><span class="diag-name">${esc(b('names')[code])}</span><span class="diag-badge na" id="badge-${code}"></span></div>
-        <p class="diag-desc">${esc(b('desc')[code])}</p>`;
-      if (code === 'I2' || code === 'I3') {
-        const cur = String(S.direct[code] || '');
-        const opts = b('rubric')[code].map((txt, i) => {
-          const on = cur === String(i + 1);
-          return `<label class="rubric-opt${on ? ' on' : ''}"><input type="radio" name="direct-${code}" value="${i + 1}" data-bind="direct.${code}"${on ? ' checked' : ''}><span class="mono">${BAND_RANGES[i]}</span><span>${esc(txt)}</span></label>`;
-        }).join('');
-        return `<div class="diag-row direct" id="diag-${code}">${head}<p class="diag-hint" id="hint-${code}"></p>
-          <fieldset class="rubric"><legend>${esc(b('direct'))}</legend>${opts}</fieldset>
-          <div class="diag-override">${textInput('directNotes.' + code, `placeholder="${esc(b('notePh'))}" aria-label="${esc(b('notePh'))}"`)}</div></div>`;
-      }
-      return `<div class="diag-row" id="diag-${code}">${head}<p class="diag-why" id="why-${code}"></p>
-        <div class="diag-override"><label for="${fid('overrides.' + code + '.value')}">${esc(b('correct'))}</label>
-        ${selectInput('overrides.' + code + '.value', [['', b('auto')]].concat(bandOpts), '', false)}
-        ${textInput('overrides.' + code + '.note', `placeholder="${esc(b('reason'))}" aria-label="${esc(b('reason'))}"`)}</div></div>`;
-    }).join('');
-    return block(6, 'b6', `<p class="lead small">${esc(b('lead'))}</p>${rows}<div class="scoreout" id="prev-out"></div><p class="note">${esc(b('observedNote'))}</p>`) + stepNav();
-  }
+  // ---------- viste ----------
+  const VIEWS = {
+    intro() {
+      const x = t('intro');
+      const resume = S.consent && S.maxCh > 0
+        ? `<div class="resume card"><div><strong>${esc(t('ui.resumeTitle'))}</strong><p>${esc(t('ui.resumeText', { chapter: t('chapters')[Math.min(S.maxCh, 9)] }))}</p></div>
+            <div class="resume-actions"><button type="button" class="btn btn-primary" data-act="resume">${esc(t('ui.resumeBtn'))}</button><button type="button" class="btn btn-ghost" data-act="restart">${esc(t('ui.restart'))}</button></div></div>` : '';
+      return `<div class="hero-band">${seaLayer('sea-soft')}
+          <div class="hero-band-inner">
+            <span class="eyebrow">${esc(x.eyebrow)}</span>
+            <h1 class="q-title" tabindex="-1">${esc(x.title)}</h1>
+            <p class="lede">${esc(x.lede)}</p>
+            <div class="meta-row">${x.meta.map(([v, l]) => `<div><div class="meta-v">${esc(v)}</div><div class="meta-l">${esc(l)}</div></div>`).join('')}</div>
+          </div></div>
+        ${resume}
+        <div class="intro-cards">${x.cards.map(c => `<div class="card intro-card">${ICON(c.icon)}<h3>${esc(c.t)}</h3><p>${esc(c.d)}</p></div>`).join('')}</div>
+        <section class="card research">
+          <span class="eyebrow">${esc(x.researchTitle)}</span>
+          ${x.research.map((p, i) => `<p${i === 0 ? ' class="research-lead"' : ''}>${esc(p.replace('{title}', CONTENT.paperTitle))}</p>`).join('')}
+          <h3 class="authors-title">${esc(x.authorsTitle)}</h3>${authorsGrid()}
+        </section>
+        <div class="card consent">
+          <label class="check"><input type="checkbox" data-bind="consent"${S.consent ? ' checked' : ''}><span>${esc(x.consent)}</span></label>
+          <div class="consent-links"><button type="button" class="linklike" data-act="privacy">${esc(x.consentLink)}</button>
+          <a class="linklike" href="../semplificato/">${esc(x.liteLink)}</a></div>
+          <p class="consent-need" id="consent-need"${S.consent ? ' hidden' : ''}>${esc(x.consentNeed)}</p>
+          <input type="text" class="hp" name="website" data-bind="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        </div>`;
+    },
 
-  function stepInterventions() {
-    const b = k => t('b7.' + k);
-    const iv = R.interventions;
-    let body = `<p class="lead small">${esc(b('lead'))}</p>`;
-    if (iv.dataFirst) body += `<div class="warn show">${esc(b('dataFirst').replace('{d}', R.dms.effective))}</div>`;
-    if (!iv.observed.length) body += `<p class="empty">${esc(b('noObserved'))}</p>`;
-    iv.observed.slice().sort((x, y) => R.diagnosis[y].value - R.diagnosis[x].value).forEach(code => {
-      const dx = R.diagnosis[code];
-      body += `<div class="family"><div class="family-head"><span class="diag-code">${code}</span><span class="diag-name">${esc(t('b6.names')[code])}</span>
-        <span class="diag-badge b${dx.band}">${dx.value}/100 · ${esc(t('common.bands')[dx.band - 1])}</span></div>
-        ${iv.list.filter(x => x.ineff === code).map(interventionCard).join('')}</div>`;
-    });
-    body += `<div class="formula">${esc(b('formula'))}</div><p class="note">${esc(b('bandsNote'))}</p>`;
-    return block(7, 'b7', body) + stepNav();
-  }
+    chapter(sc, list) {
+      const ci = t('chapterIntro')[sc.ch];
+      const n = chapterCount(list, sc.ch);
+      const warn = sc.ch === 7 && R.interventions.dataFirst ? `<div class="note warn">${ICON('database')}<span>${esc(t('q.ivSelect.dataFirst'))}</span></div>` : '';
+      return `<div class="chapter-hero">${seaLayer('sea-soft')}
+          <div class="chapter-inner">
+            <div class="chapter-num num">${String(sc.ch).padStart(2, '0')}</div>
+            <div><span class="eyebrow">${esc(t('ui.chapterOf', { n: sc.ch, t: TOTAL_CH }))}</span>
+            <h1 class="q-title" tabindex="-1">${esc(ci.title)}</h1>
+            <p class="lede">${esc(ci.desc)}</p>
+            <p class="chapter-meta">${esc(t('ui.chapterMeta', { n, m: Math.max(1, Math.round(n / 3)) }))}</p></div>
+          </div></div>
+        ${factCard(CHAPTER_FACT[sc.ch])}${warn}`;
+    },
 
-  function interventionCard(x) {
-    const b = k => t('b7.' + k);
-    const base = 'interventions.' + x.id + '.';
-    const u = S.interventions[x.id] || {};
-    const head = `<div class="ihead"><label class="check"><input type="checkbox" data-bind="${base}selected" data-rerender${x.selected ? ' checked' : ''}>
-      <span class="iname">${esc(t('interventions.' + x.id))}</span></label><span class="role ${x.role}">${esc(b(x.role))}</span></div>`;
-    if (!x.selected) return `<div class="intv off" id="intv-${x.id}">${head}</div>`;
-    let lever = '';
-    if (x.scenario) {
-      const pct = CCF.num(u.leverPct) !== null ? u.leverPct : Math.round(x.scenario.lever * 100);
-      lever = `<div class="lever"><label for="${fid(base + 'leverPct')}" id="lever-label-${x.id}"></label>
-        <div class="lever-in"><input type="number" inputmode="decimal" id="${fid(base + 'leverPct')}" data-bind="${base}leverPct" min="0" max="100" step="1" value="${esc(pct)}"><span class="mono">%</span></div></div>`;
-    }
-    const q = (dim, dir) => `<div class="qcard"><label class="q-txt" for="${fid(base + dim)}">${esc(b('qs')[dim])} <span class="tagdir ${dir}">${esc(b(dir))}</span></label>
-      <select id="${fid(base + dim)}" data-bind="${base}${dim}"><option value="">${esc(t('common.select'))}</option>${b('answers')[dim].map((a, i) => `<option value="${i + 1}">${esc(a)}</option>`).join('')}</select>
-      <div class="q-sub" id="sub-${x.id}-${dim}"></div></div>`;
-    return `<div class="intv" id="intv-${x.id}">${head}<div class="qbody">${lever}<p class="estimate" id="est-${x.id}"></p>
-      ${q('impact', 'up')}${q('data', 'up')}${q('acc', 'up')}${q('cost', 'down')}${q('gcs', 'down')}</div><div class="ipiout pending" id="ipi-${x.id}"></div></div>`;
-  }
+    choice(sc) {
+      const cur = getPath(sc.path);
+      return head(sc) + `<div class="opts ${sc.layout || ''}" role="group">${sc.options.map((o, i) => optButton(sc.path, o, i, cur)).join('')}</div>`;
+    },
 
-  function stepResults() {
-    R.interventions.ranked.forEach(x => { if (!S.monitoring[x.id]) S.monitoring[x.id] = { freq: 'semiannual', owner: 'mm' }; });
-    return `<section class="results"><h2 class="sec">${esc(t('results.title'))}</h2><p class="lead">${esc(t('results.lead'))}</p>
-      <div class="report">${reportHTML(false)}</div>${stepNav(t('results.toFeedback'))}</section>`;
-  }
+    number(sc) {
+      const v = getPath(sc.path);
+      return head(sc) + `<div class="bignum">
+          <button type="button" class="step" data-step="${sc.path}" data-d="-1" aria-label="−">−</button>
+          <input class="bignum-input num" type="number" inputmode="numeric" min="${sc.min}" max="${sc.max}" data-bind="${sc.path}" value="${esc(has(v) ? v : '')}" placeholder="0" aria-label="${esc(sc.title)}">
+          <button type="button" class="step" data-step="${sc.path}" data-d="1" aria-label="+">+</button>
+          <span class="bignum-unit">${esc(sc.unit)}</span></div>
+        <div class="chips">${sc.chips.map(c => `<button type="button" class="chip" data-set="${sc.path}" data-value="${c}">${fmt(c)}</button>`).join('')}</div>`;
+    },
 
-  function reportHTML(print) {
-    const r = t('results');
-    const B = R.baseline, D = R.diagnosis, IV = R.interventions;
-    const title = [S.profile.orgName, S.profile.siteName].filter(Boolean).join(' — ') || r.untitled;
-    const date = new Date().toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-    const tile = (lab, val, sub, cls) => `<div class="rep-score ${cls || ''}"><div class="rs-lab">${esc(lab)}</div><div class="rs-val">${val}</div><div class="rs-band">${esc(sub || '')}</div></div>`;
-    const rowsN = B.rows.filter(x => x.n > 0);
-    const low = t('common.lowReliability');
+    region(sc) {
+      const cur = S.profile.region;
+      const g = t('q.region.groups');
+      let i = 0;
+      const group = (names, label) => `<div class="region-group"><div class="region-label">${esc(label)}</div><div class="region-chips">${names.map(n => {
+        i += 1;
+        return `<button type="button" class="chip${cur === n ? ' on' : ''}" data-choose="profile.region" data-value="${esc(n)}" aria-pressed="${cur === n}">${esc(n)}</button>`;
+      }).join('')}</div></div>`;
+      return head(sc) + `<div class="regions">${REGIONS.map((names, k) => group(names, g[k])).join('')}
+        <div class="region-group"><div class="region-chips"><button type="button" class="chip${cur === 'abroad' ? ' on' : ''}" data-choose="profile.region" data-value="abroad" aria-pressed="${cur === 'abroad'}">${esc(t('q.region.abroad'))}</button></div></div></div>`;
+    },
 
-    // 1 · baseline report (blocchi 1 e 3)
-    let s1 = `<div class="rep-scores">
-      ${tile(r.dmsDeclared, R.dms.declared === null ? '—' : R.dms.declared + '/5', '')}
-      ${tile(r.dmsEffective, R.dms.effective === null ? '—' : R.dms.effective + '/5', R.dms.lowReliability.length ? low + ': ' + R.dms.lowReliability.join(', ') : '', R.dms.dataFirst ? 'crit' : '')}
-      ${tile(t('b3.kpi.G'), fmt(B.tCO2e, 1), t('b3.kpi.Gunit'))}</div>`;
-    if (B.complete) {
-      s1 += `<div class="tablewrap"><table class="rep-table"><thead><tr><th>${esc(r.cols.mode)}</th><th>${esc(r.cols.n)}</th><th>${esc(r.cols.share)}</th><th>${esc(r.cols.paxkm)}</th><th>${esc(r.cols.g)}</th></tr></thead><tbody>
-        ${rowsN.map(x => `<tr><td>${esc(t('modes.' + x.id))}</td><td>${fmt(x.n)}</td><td>${fmt(x.n / B.N * 100, 1)}%</td><td>${fmt(x.A)}</td><td>${fmt(x.G / 1e6, 1)}</td></tr>`).join('')}
-        </tbody><tfoot><tr><td>${esc(r.total)}</td><td>${fmt(B.N)}</td><td>100%</td><td>${fmt(B.A)}</td><td>${fmt(B.tCO2e, 1)}</td></tr></tfoot></table></div>`;
-    } else s1 += `<p class="empty">${esc(t('b3.empty'))}</p>`;
+    percent(sc) {
+      const v = getPath(sc.path);
+      const val = has(v) ? Number(v) : null;
+      return head(sc) + `<div class="dial">
+          <div class="dial-value num" id="pct-value">${val === null ? '—' : fmt(val)}<span>%</span></div>
+          <input type="range" class="range${val === null ? ' unset' : ''}" min="0" max="100" step="5" value="${val === null ? 0 : val}" data-bind="${sc.path}" aria-label="${esc(sc.title)}">
+          <div class="range-ends"><span>0%</span><span>50%</span><span>100%</span></div></div>
+        <div class="chips">${sc.chips.map(c => `<button type="button" class="chip" data-set="${sc.path}" data-value="${c}">${c}%</button>`).join('')}</div>`;
+    },
 
-    // 2 · quadro diagnostico (blocchi 2, 4, 5, 6)
-    const bandCol = v => (v <= 40 ? 'var(--signal)' : v <= 60 ? 'var(--lime)' : 'var(--coral)');
-    const items = CODES.map(c => D[c]).sort((a, b) => (b.value === null ? -1 : b.value) - (a.value === null ? -1 : a.value));
-    let s2 = items.map(x => `<div class="rep-ineff-item"><span class="ri-code">${x.code}</span>
-      <span class="ri-name">${esc(t('b6.names')[x.code])}${x.overridden ? ` <em class="tag">${esc(t('b6.corrected'))}</em>` : ''}</span>
-      <span class="ri-bar"><i style="width:${x.value === null ? 0 : x.value}%;background:${bandCol(x.value || 0)}"></i></span>
-      <span class="ri-val">${x.value === null ? esc(t('common.notAvailable')) : x.value + ' · ' + esc(t('common.bands')[x.band - 1])}</span></div>`).join('');
-    const compSub = (c, key) => (c.value === null ? '' : t(key + '.bands')[fourBand(c.value)].name + (c.reliable ? '' : ' · ' + low));
-    s2 += `<div class="rep-h sub">${esc(r.causal)}</div><div class="rep-scores">
-      ${tile('MNS', R.mns.valid ? fmt(R.mns.value, 0) + '/100' : '—', R.mns.valid ? mnsBand(R.mns.value).name : '')}
-      ${tile('ACC', R.acc.value === null ? '—' : fmt(R.acc.value, 0) + '/100', compSub(R.acc, 'b4'))}
-      ${tile('CDR', R.cdr.value === null ? '—' : fmt(R.cdr.value, 0) + '/100', compSub(R.cdr, 'b5'))}</div>`;
+    mns(sc) {
+      const x = t('q.mns');
+      const set = R.mns.valid;
+      const qe = set ? Number(S.mns.qe) : 50, qp = set ? Number(S.mns.qp) : 30;
+      return head(sc) + `<div class="split3${set ? '' : ' preview'}" id="split3">
+          <div class="seg seg-a" style="width:${qe}%"><span class="seg-v num">${qe}%</span></div>
+          <div class="seg seg-b" style="width:${qp}%"><span class="seg-v num">${qp}%</span></div>
+          <div class="seg seg-c" style="width:${100 - qe - qp}%"><span class="seg-v num">${100 - qe - qp}%</span></div>
+          <button type="button" class="handle" data-h="0" role="slider" aria-label="${esc(x.aria[0])}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${qe}" style="left:${qe}%"></button>
+          <button type="button" class="handle" data-h="1" role="slider" aria-label="${esc(x.aria[1])}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${qe + qp}" style="left:${qe + qp}%"></button>
+        </div>
+        <div class="split-legend">${x.seg.map((l, i) => `<div class="leg leg-${'abc'[i]}"><i></i><span>${esc(l)}</span><strong class="num" id="leg-${i}">${[qe, qp, 100 - qe - qp][i]}%</strong></div>`).join('')}</div>
+        ${set ? '' : `<button type="button" class="btn btn-ghost confirm-default" data-act="mnsConfirm">${esc(lang === 'it' ? 'Va bene così' : 'Looks right')}</button>`}`;
+    },
 
-    // 3 · dashboard, equazioni (2)–(7)
-    let s3 = '';
-    if (B.complete) {
-      s3 += `<div class="tablewrap"><table class="rep-table"><thead><tr><th>${esc(r.cols.mode)}</th><th>${esc(r.cols.ei)}</th><th>${esc(r.cols.lf)}</th><th>${esc(r.cols.ci)}</th><th>${esc(r.cols.g)}</th></tr></thead><tbody>
-        ${rowsN.map(x => `<tr><td>${esc(t('modes.' + x.id))}</td><td>${fmt(x.EI, 3)}</td><td>${fmt(x.LF * 100, 0)}%</td><td>${fmt(x.CI, 0)}</td><td>${fmt(x.G / 1e6, 1)}</td></tr>`).join('')}
-        </tbody></table></div>`;
-    }
-    const acrSub = R.acr ? r.acrText.replace('{p}', fmt(R.acr.ACR * 100, 0)).replace('{d}', fmt(R.acr.daysNow, 1)).replace('{n}', fmt(R.acr.daysNeeded, 1)) : r.acrNa;
-    s3 += `<div class="rep-scores">
-      ${tile(r.ciSys, fmt(B.CI, 0), t('b3.kpi.CIunit'))}
-      ${tile(r.eiSys, fmt(B.EI, 3), t('b3.kpi.EIunit'))}
-      ${tile(r.acr, R.acr ? fmt(R.acr.ACR * 100, 0) + '%' : '—', acrSub)}</div>`;
-    const estimated = IV.list.filter(x => x.selected && x.estimate.estimable).sort((a, b) => b.estimate.dG - a.estimate.dG);
-    if (estimated.length) {
-      s3 += `<div class="rep-h sub">${esc(r.dg)}</div>` + estimated.map(x => `<div class="rep-ipi-row"><span class="rname">${esc(t('interventions.' + x.id))}</span>
-        <span class="rnum small">${fmt(x.estimate.dG / 1e6, 1)} tCO₂e · ${fmt(x.dGpct, 1)}%</span></div>`).join('');
-    }
+    distance(sc) {
+      const v = CCF.num(S.baseline.oneWay);
+      return head(sc) + `<div class="dial">
+          <div class="dial-value num" id="dist-value">${v === null ? '—' : fmt(v, v % 1 ? 1 : 0)}<span> km</span></div>
+          <input type="range" class="range${v === null ? ' unset' : ''}" min="1" max="100" step="0.5" value="${v === null ? 1 : v}" data-bind="baseline.oneWay" aria-label="${esc(sc.title)}">
+          <div class="range-ends"><span>1 km</span><span>50 km</span><span>100 km</span></div></div>
+        <div class="chips">${sc.chips.map(c => `<button type="button" class="chip" data-set="baseline.oneWay" data-value="${c}">${c} km</button>`).join('')}</div>`;
+    },
 
-    // 4 · piano di intervento (blocchi 7 e 8) e monitoraggio
-    let s4 = '';
-    if (IV.dataFirst) s4 += `<div class="rep-ipi-row d0"><span class="rank">#0</span><span class="rname">${esc(r.d0)}<span class="rsub">${esc(r.d0note)}</span></span><span class="prio A">DMS</span></div>`;
-    if (!IV.ranked.length) s4 += `<p class="empty">${esc(IV.observed.length ? r.planEmpty : t('b7.noObserved'))}</p>`;
-    s4 += IV.ranked.map((x, i) => `<div class="rep-ipi-row"><span class="rank">#${i + 1}</span>
-      <span class="rname">${esc(t('interventions.' + x.id))}<span class="rsub">${x.ineff} · ${esc(t('b6.names')[x.ineff])} · ${esc(t('b7.' + x.role))}${x.governancePlan ? ' · ' + esc(t('b7.govPlan')) : ''}</span></span>
-      <span class="rnum">${fmt(x.ipi, 1)}</span><span class="prio ${x.cls}">${x.cls}</span></div>`).join('');
-    if (IV.ranked.length) {
-      const cells = IV.ranked.map(x => {
-        const m = S.monitoring[x.id] || { freq: 'semiannual', owner: 'mm' };
-        const freq = print ? esc(r.freq[m.freq]) : selectInput('monitoring.' + x.id + '.freq', entries(r.freq), `aria-label="${esc(r.monitorCols.freq)}"`, false);
-        const owner = print ? esc(r.owners[m.owner]) : selectInput('monitoring.' + x.id + '.owner', entries(r.owners), `aria-label="${esc(r.monitorCols.owner)}"`, false);
-        return `<tr><td>${esc(t('interventions.' + x.id))}</td><td>${esc(r.indicators[CCF.MONITORING[x.ineff]])}</td><td>${freq}</td><td>${owner}</td></tr>`;
+    modes(sc) {
+      const x = t('q.modes');
+      const tot = CCF.num(S.profile.employees);
+      const tiles = CCF.MODES.map(m => {
+        const n = (S.baseline.modes[m.id] || {}).n;
+        return `<div class="mode-tile${CCF.num(n) > 0 ? ' on' : ''}" data-tile="${m.id}">
+          <span class="mode-ico">${ICON(MODE_ICON[m.id])}</span><span class="mode-label">${esc(t('options.modes')[m.id])}</span>
+          <div class="stepper"><button type="button" data-mstep="${m.id}" data-d="-1" aria-label="−">−</button>
+            <input type="number" inputmode="numeric" min="0" class="num" data-bind="baseline.modes.${m.id}.n" value="${esc(has(n) ? n : '')}" placeholder="0" aria-label="${esc(t('options.modes')[m.id])}">
+            <button type="button" data-mstep="${m.id}" data-d="1" aria-label="+">+</button></div>
+          <button type="button" class="fill-rest" data-fill="${m.id}">${esc(x.fill)}</button></div>`;
       }).join('');
-      s4 += `<div class="rep-h sub">${esc(r.monitor)}</div><div class="tablewrap"><table class="rep-table monitor"><thead><tr><th>${esc(r.monitorCols.intv)}</th><th>${esc(r.monitorCols.ind)}</th><th>${esc(r.monitorCols.freq)}</th><th>${esc(r.monitorCols.owner)}</th></tr></thead><tbody>${cells}</tbody></table></div>
-        <p class="note">${esc(r.systemInd)} ${esc(r.review)}</p>`;
-    }
+      const pc = x.paramCols;
+      const params = CCF.MODES.map(m => `<tr><th scope="row">${esc(t('options.modes')[m.id])}</th>
+        ${['e', 'o', 'k', 'phi'].map(p => `<td><input type="number" class="num" min="0" step="any" data-bind="baseline.modes.${m.id}.${p}" value="${esc(has((S.baseline.modes[m.id] || {})[p]) ? S.baseline.modes[m.id][p] : '')}" placeholder="${p === 'phi' ? CCF.PHI[m.carrier] : m[p]}" aria-label="${esc(pc[p])}"></td>`).join('')}
+        <td class="num" id="lf-${m.id}"></td></tr>`).join('');
+      return head(Object.assign({}, sc, { sub: x.sub.replace('{tot}', tot ? fmt(tot) : '—') })) + `
+        <div class="modes-summary card">
+          <div class="stack" id="modes-stack"></div>
+          <div class="modes-meta"><span id="modes-assigned"></span><span class="teaser" id="modes-teaser"></span></div>
+        </div>
+        <div class="modes-grid">${tiles}</div>
+        <details class="params"><summary>${esc(x.advanced)}</summary><p class="muted">${esc(x.advancedNote)}</p>
+          <div class="table-wrap"><table class="params-table"><thead><tr><th>${esc(pc.mode)}</th><th>${esc(pc.e)}</th><th>${esc(pc.o)}</th><th>${esc(pc.k)}</th><th>${esc(pc.phi)}</th><th>${esc(pc.lf)}</th></tr></thead><tbody>${params}</tbody></table></div></details>`;
+    },
 
-    return `<div class="rep-head"><div class="rep-eyebrow">${esc(r.eyebrow)}</div><div class="rep-title">${esc(title)}</div>
-        <div class="rep-date">${esc(r.generated.replace('{date}', date).replace('{v}', CCF.VERSION))}</div></div>
-      <div class="rep-section"><div class="rep-h">${esc(r.s1)}</div>${s1}</div>
-      <div class="rep-section"><div class="rep-h">${esc(r.s2)}</div>${s2}</div>
-      <div class="rep-section"><div class="rep-h">${esc(r.s3)}</div>${s3}</div>
-      <div class="rep-section"><div class="rep-h">${esc(r.s4)}</div>${s4}</div>
-      <div class="rep-foot">${esc(r.foot)}</div>`;
-  }
+    modeDistances(sc) {
+      const rows = R.baseline.rows.filter(r => r.n > 0).map(r => {
+        const own = CCF.num((S.baseline.modes[r.id] || {}).oneWay);
+        const v = own !== null ? own : defaultOneWay(r.id);
+        return `<div class="dist-row"><span class="mode-ico">${ICON(MODE_ICON[r.id])}</span><span class="dist-label">${esc(t('options.modes')[r.id])}</span>
+          <input type="range" class="range" min="0.5" max="100" step="0.5" value="${v}" data-bind="baseline.modes.${r.id}.oneWay" aria-label="${esc(t('options.modes')[r.id])}">
+          <span class="dist-v num" id="dv-${r.id}">${fmt(v, v % 1 ? 1 : 0)} km</span></div>`;
+      }).join('');
+      return head(sc) + `<div class="card dist-card">${rows}</div>`;
+    },
 
-  function stepFeedback() {
-    if (S.code) return thanksHTML();
-    const f = k => t('feedback.' + k);
-    const likert = entries(f('items')).map(([k, label]) => {
-      const cur = String(S.feedback[k] || '');
-      return `<fieldset class="likert"><legend>${esc(label)}</legend><div class="likert-opts">
-        ${[1, 2, 3, 4, 5].map(v => `<label title="${esc(f('scale')[v - 1])}"><input type="radio" name="fb-${k}" value="${v}" data-bind="feedback.${k}"${cur === String(v) ? ' checked' : ''}><span>${v}</span></label>`).join('')}
-        </div><div class="likert-ends"><span>1 · ${esc(f('scale')[0])}</span><span>5 · ${esc(f('scale')[4])}</span></div></fieldset>`;
-    }).join('');
-    const yesNo = (k, textKey) => {
-      const cur = S.feedback[k] || '';
-      const opts = [['yes', t('common.yes')], ['no', t('common.no')]].map(([v, l]) =>
-        `<label><input type="radio" name="fb-${k}" value="${v}" data-bind="feedback.${k}" data-rerender${cur === v ? ' checked' : ''}><span>${esc(l)}</span></label>`).join('');
-      const more = cur === 'yes' ? `<textarea data-bind="feedback.${k}text" rows="2" placeholder="${esc(f(textKey))}" aria-label="${esc(f(textKey))}">${esc(S.feedback[k + 'text'] || '')}</textarea>` : '';
-      return `<fieldset class="yn"><legend>${esc(f(k))}</legend><div class="yn-opts">${opts}</div>${more}</fieldset>`;
-    };
-    const email = S.contact.ok ? field(f('email'), `<input type="email" id="${fid('contact.email')}" data-bind="contact.email" value="${esc(S.contact.email)}" autocomplete="email">`, '', 'contact.email') + `<p class="note">${esc(f('contactNote'))}</p>` : '';
-    return `<section class="block"><div class="block-head"><span class="bn">✓</span><div class="bt">${esc(f('title'))}<span class="bq">${esc(f('q'))}</span></div></div><div class="block-body">
-      <p class="lead small">${esc(f('lead'))}</p>
-      ${likert}${yesNo('c1', 'c1text')}${yesNo('c2', 'c2text')}
-      <div class="grid2" style="margin-top:14px">
-        ${field(f('role'), selectInput('feedback.role', entries(f('roles'))), '', 'feedback.role')}
-        ${field(f('experience'), selectInput('feedback.experience', entries(f('exp'))), '', 'feedback.experience')}
-      </div>
-      ${field(f('channel'), selectInput('feedback.channel', entries(f('channels'))), '', 'feedback.channel')}
-      <div class="field"><label for="${fid('feedback.open')}">${esc(f('open'))}</label><textarea id="${fid('feedback.open')}" data-bind="feedback.open" rows="3">${esc(S.feedback.open || '')}</textarea></div>
-      <div class="contact"><label class="check"><input type="checkbox" data-bind="contact.ok" data-rerender${S.contact.ok ? ' checked' : ''}><span>${esc(f('contact'))}</span></label>${email}</div>
-      <div class="warn" id="fb-msg" role="alert"></div>
-    </div></section>
-    <div class="stepnav"><button type="button" class="btn ghost" data-action="back">${esc(t('nav.back'))}</button><span></span>
-      <button type="button" class="btn primary" data-action="submit" id="submit-btn">${esc(f('submit'))}</button></div>`;
-  }
+    scale(sc) {
+      const cur = S[sc.arr][sc.k];
+      const total = sc.arr === 'acc' ? 7 : 5;
+      const options = sc.items.map((label, j) => ({ value: String(5 - j), label, scale: 5 - j }));
+      const eyebrow = `${t('chapters')[sc.arr === 'acc' ? 4 : 5]} · ${sc.k + 1}/${total}`;
+      return head(Object.assign({}, sc, { eyebrow })) + `<div class="opts row-5" role="group">${options.map((o, i) => optButton(`${sc.arr}.${sc.k}`, o, i, cur)).join('')}</div>
+        <div class="dontknow-row"><button type="button" class="chip${cur === 'nd' ? ' on' : ''}" data-choose="${sc.arr}.${sc.k}" data-value="nd" data-dontknow aria-pressed="${cur === 'nd'}">${esc(t('ui.dontKnow'))} <kbd>0</kbd></button></div>`;
+    },
 
-  function thanksHTML() {
-    const k = key => t('thanks.' + key);
-    return `<section class="thanks"><h2 class="sec">${esc(k('title'))}</h2><p class="lead">${esc(k('body'))}</p>
-      <p class="sync mono" id="sync-status" role="status"></p>
-      <p class="code mono">${esc(k('code').replace('{code}', S.code))}</p><p class="note">${esc(k('codeNote'))}</p>
-      <div class="actions" style="margin-top:18px"><button type="button" class="btn primary" data-action="print">${esc(k('download'))}</button>
-      <button type="button" class="btn ghost" data-action="newrun">${esc(k('newRun'))}</button></div>
-      <p class="note">${esc(k('printHint'))}</p></section>`;
-  }
-
-  const STEPS = [stepIntro, stepProfile, stepMNS, stepBaseline,
-    () => stepComposite(4, 'b4', 'acc'), () => stepComposite(5, 'b5', 'cdr'),
-    stepDiagnosis, stepInterventions, stepResults, stepFeedback];
-
-  // ---------- output live (senza ridisegnare i campi) ----------
-  function updateOutputs() {
-    switch (S.step) {
-      case 0: {
-        const btn = $('#start-btn'); if (btn) btn.disabled = !S.consent;
-        const need = $('#consent-need'); if (need) need.hidden = !!S.consent;
-        break;
+    ineff(sc) {
+      const x = t('q.ineff');
+      const code = sc.code;
+      const d = R.diagnosis[code];
+      const direct = DIRECT.includes(code);
+      const bands = t('options.bands');
+      const derivedBand = !direct && d.derived !== null ? CCF.band(d.derived) : null;
+      const cur = direct ? S.direct[code] : (S.overrides[code] ? String(CCF.band(Number(S.overrides[code].value))) : (derivedBand ? String(derivedBand) : ''));
+      const options = x[code].options.map((label, i) => ({ value: String(i + 1), label, scale: i + 1, tag: derivedBand === i + 1 ? t('ui.estimateTag') : '' }));
+      let note = '';
+      if (direct && code === 'I2') {
+        const sh = R.baseline.rows.find(r => r.id === 'shuttle');
+        note = sh && sh.n > 0 ? x.hintI2.replace('{n}', fmt(sh.n)) : x.hintI2none;
+      } else if (direct && code === 'I3') {
+        const a = S.acc[3];
+        const label = a === 'nd' || !has(a) ? t('ui.dontKnow') : t('q.acc')[3].options[5 - Number(a)];
+        note = x.hintI3.replace('{a}', label).replace('{c}', has(S.profile.shiftPct) ? S.profile.shiftPct : '—');
+      } else {
+        note = derivedBand ? x.estimate.replace('{band}', bands[derivedBand - 1]) : x.estimateNone;
       }
-      case 1:
-        $$('.radiocard').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
-        toggleWarn('#dms-warn', S.profile.dms !== '' && Number(S.profile.dms) < 2);
-        break;
-      case 2: mnsOutputs(); break;
-      case 3: baselineOutputs(); break;
-      case 4: compositeOutputs('acc', 'b4'); break;
-      case 5: compositeOutputs('cdr', 'b5'); break;
-      case 6: diagnosisOutputs(); break;
-      case 7: interventionOutputs(); break;
-      default: break;
+      const overridden = !direct && S.overrides[code] && derivedBand !== null;
+      const reason = overridden ? `<label class="reason"><span>${esc(x.reason)}</span><textarea rows="2" data-bind="overrides.${code}.note">${esc(S.overrides[code].note || '')}</textarea></label>` : '';
+      const dk = direct || derivedBand === null
+        ? `<div class="dontknow-row"><button type="button" class="chip${S.skipped[code] ? ' on' : ''}" data-act="ineffSkip" data-code="${code}" data-dontknow>${esc(x.dontKnow)} <kbd>0</kbd></button></div>` : '';
+      return head(Object.assign({}, sc, { eyebrow: `${code} · ${x[code].name}`, icon: INEFF_ICON[code] }), `<p class="q-note">${ICON(direct ? 'search' : 'radar')}<span>${esc(note)}</span></p>`)
+        + `<div class="opts col-5" role="group">${options.map((o, i) => optButton('ineff.' + code, o, i, cur)).join('')}</div>${reason}${dk}`;
+    },
+
+    ivSelect() {
+      const x = t('q.ivSelect');
+      const cands = orderedCandidates();
+      if (!cands.length) return head({ title: x.none });
+      const title = cands.length === 1 ? x.titleOne : x.title.replace('{n}', cands.length);
+      const warn = R.interventions.dataFirst ? `<div class="note warn">${ICON('database')}<span>${esc(x.dataFirst)}</span></div>` : '';
+      return head({ title, sub: x.sub }) + warn + `<div class="iv-list">${cands.map(c => `<button type="button" class="iv-pick" data-toggle-iv="${c.id}" aria-pressed="${c.selected}">
+          <span class="iv-pick-check">${ICON('check')}</span>
+          <span class="iv-pick-body"><span class="iv-pick-name">${esc(t('interventions')[c.id])}</span>
+          <span class="iv-pick-meta"><span class="pill ${c.role}">${esc(x[c.role])}</span>${esc(x.treats.replace('{name}', t('q.ineff')[c.ineff].name))}</span></span>
+          ${ICON(INEFF_ICON[c.ineff], 'iv-pick-ico')}</button>`).join('')}</div>`;
+    },
+
+    iv(sc) {
+      const x = t('q.iv');
+      const r = ivResult(sc.ivId);
+      if (!r) return '';
+      const u = S.interventions[sc.ivId] || {};
+      const lever = r.scenario ? `<label class="lever"><span id="iv-lever-label"></span>
+          <input type="range" class="range" min="0" max="100" step="1" value="${CCF.num(u.leverPct) !== null ? u.leverPct : Math.round(r.scenario.lever * 100)}" data-bind="interventions.${sc.ivId}.leverPct"></label>` : '';
+      const row = (dim, label, opts, glyph) => `<div class="qrow"><div class="qrow-label">${esc(label)}</div>
+          <div class="chips5" role="group">${opts.map((l, i) => `<button type="button" class="c5" data-ivset="${sc.ivId}" data-dim="${dim}" data-value="${i + 1}" aria-pressed="false">
+            ${glyph === 'gcs' ? ICON(GCS_ICON[i]) : SCALE(i + 1)}<span>${esc(l)}</span></button>`).join('')}</div>
+          <div class="qrow-note" id="note-${dim}"></div></div>`;
+      return head({ eyebrow: x.eyebrow.replace('{k}', sc.k).replace('{n}', sc.n).replace('{name}', t('q.ineff')[r.ineff].name), title: t('interventions')[sc.ivId] })
+        + `<div class="iv-grid">
+          <div class="card iv-estimate"><span class="eyebrow">${ICON('leaf')}${esc(x.reduction)}</span>
+            <div class="iv-dg num" id="iv-dg">—</div><div class="iv-unit" id="iv-unit">${esc(x.unit)}</div><div class="iv-pct" id="iv-pct"></div>${lever}
+          </div>
+          <div class="iv-questions">
+            ${row('cost', x.qCost, x.cost)}${row('acc', x.qAcc, x.acc)}${row('data', x.qData, x.data)}
+            <details class="more" id="more-gcs"><summary><span>${esc(x.qGcs)}</span><strong id="sum-gcs"></strong></summary>${row('gcs', x.qGcs, x.gcs, 'gcs')}</details>
+            <details class="more" id="more-impact"${r.impactProposed === null ? ' open' : ''}><summary><span>${esc(x.qImpact)}</span><strong id="sum-impact"></strong></summary>${row('impact', x.qImpact, x.impact)}</details>
+          </div></div>
+        <div class="iv-result" id="iv-result"></div>`;
+    },
+
+    results() {
+      const x = t('q.results');
+      const D = R.diagnosis;
+      const prev = R.prevailing[0];
+      const kp = x.kpi;
+      const B = R.baseline;
+      const warns = [R.dms.dataFirst ? x.dataFirst : '', R.dms.lowReliability.length ? x.lowRel : ''].filter(Boolean)
+        .map(w => `<div class="note warn">${ICON('database')}<span>${esc(w)}</span></div>`).join('');
+      const kpi = (ico, [label, unit], val) => `<div class="kpi card">${ICON(ico)}<div class="kpi-v num">${val}</div><div class="kpi-l">${esc(label)}</div><div class="kpi-u">${esc(unit)}</div></div>`;
+      const ineffRows = CODES.map(c => D[c]).sort((a, b) => (b.value === null ? -1 : b.value) - (a.value === null ? -1 : a.value)).map(d => `
+        <div class="ineff-row">${ICON(INEFF_ICON[d.code])}<div class="ineff-name"><strong>${esc(t('q.ineff')[d.code].name)}</strong><span>${d.code}${d.overridden ? ' · ' + (lang === 'it' ? 'corretta da te' : 'corrected by you') : ''}</span></div>
+          <div class="bar"><i class="sevbg${d.value === null ? '' : ' b' + d.band}" style="width:${d.value === null ? 0 : d.value}%"></i></div>
+          <span class="sev ${d.value === null ? 'na' : 'b' + d.band}">${d.value === null ? 'n.d.' : d.value + ' · ' + esc(t('options.bands')[d.band - 1])}</span></div>`).join('');
+      const IV = R.interventions;
+      let plan = '';
+      if (IV.dataFirst) plan += `<div class="plan-row d0"><span class="rank">#0</span><div class="plan-body"><strong>${esc(x.d0)}</strong><span>${esc(x.d0note)}</span></div><span class="prio A">DMS</span></div>`;
+      if (!IV.ranked.length) plan += `<p class="muted">${esc(IV.observed.length ? x.planEmpty : x.noCandidates)}</p>`;
+      plan += IV.ranked.map((r, i) => `<div class="plan-row"><span class="rank num">#${i + 1}</span><div class="plan-body"><strong>${esc(t('interventions')[r.id])}</strong>
+          <span>${esc(t('q.ineff')[r.ineff].name)}${r.estimate.estimable && r.estimate.dG > 0 ? ' · −' + fmt(r.estimate.dG / 1e6, 1) + ' t CO₂e' : ''}${r.governancePlan ? ' · ' + esc(t('q.iv.govPlan')) : ''}</span></div>
+          <span class="ipi num">${fmt(r.ipi, 1)}</span><span class="prio ${r.cls}">${r.cls}</span></div>`).join('');
+      IV.ranked.forEach(r => { if (!S.monitoring[r.id]) S.monitoring[r.id] = { freq: 'semiannual', owner: 'mm' }; });
+      const monitor = IV.ranked.length ? `<section class="res-sec"><h2>${esc(x.monitorTitle)}</h2><div class="table-wrap"><table class="mon-table"><thead><tr><th>${esc(x.monitorCols.intv)}</th><th>${esc(x.monitorCols.ind)}</th><th>${esc(x.monitorCols.freq)}</th><th>${esc(x.monitorCols.owner)}</th></tr></thead><tbody>
+          ${IV.ranked.map(r => { const m = S.monitoring[r.id]; return `<tr><td>${esc(t('interventions')[r.id])}</td><td>${esc(x.indicators[CCF.MONITORING[r.ineff]])}</td>
+            <td>${selectHTML('monitoring.' + r.id + '.freq', entries(x.freq), m.freq)}</td><td>${selectHTML('monitoring.' + r.id + '.owner', entries(x.owners), m.owner)}</td></tr>`; }).join('')}
+          </tbody></table></div><p class="muted small">${esc(x.systemInd)}</p></section>` : '';
+      return head({ eyebrow: x.eyebrow, title: x.title, sub: x.sub }) + `
+        <div class="res-top">
+          <div class="card radar-card">${radarSVG(true)}</div>
+          <div class="res-side">
+            <div class="card prev">${prev ? `${ICON(INEFF_ICON[prev])}<span class="eyebrow">${esc(x.prevailing)}</span><h2>${esc(t('q.ineff')[prev].name)}</h2>
+              <span class="sev b${D[prev].band}">${prev} · ${D[prev].value}/100 · ${esc(t('options.bands')[D[prev].band - 1])}</span>` : `<span class="eyebrow">${esc(x.noPrevailing)}</span>`}</div>
+            <div class="kpis">
+              ${kpi('leaf', kp.g, B.complete ? fmt(B.tCO2e, 1) : '—')}${kpi('radar', kp.ci, B.complete ? fmt(B.CI, 0) : '—')}
+              ${kpi('bolt', kp.ei, B.complete ? fmt(B.EI, 3) : '—')}${kpi('home', kp.acr, R.acr ? fmt(R.acr.ACR * 100, 0) + '%' : '—')}
+            </div>${warns}
+          </div></div>
+        <section class="res-sec"><h2>${esc(x.ineffTitle)}</h2><div class="card ineff-list">${ineffRows}</div></section>
+        <section class="res-sec"><h2>${esc(x.planTitle)}</h2><div class="card plan">${plan}</div></section>
+        ${monitor}
+        <section class="res-sec card name-card"><div><h2>${esc(x.nameTitle)}</h2><p class="muted">${esc(x.nameNote)}</p></div>
+          <div class="name-fields"><label><span>${esc(x.orgName)}</span><input type="text" data-bind="profile.orgName" value="${esc(S.profile.orgName)}" autocomplete="organization"></label>
+          <label><span>${esc(x.siteName)}</span><input type="text" data-bind="profile.siteName" value="${esc(S.profile.siteName)}"></label></div></section>`;
+    },
+
+    truth(sc) {
+      const x = t('q.truth');
+      const cur = getPath(sc.path);
+      return `<header class="q-head truth-head"><span class="eyebrow">${esc(x.eyebrow)}</span><h1 class="q-title statement" tabindex="-1">«${esc(sc.title)}»</h1></header>
+        <div class="opts row-5 truth" role="group">${x.options.map((l, i) => optButton(sc.path, { value: String(i + 1), label: l, scale: i + 1 }, i, cur)).join('')}</div>`;
+    },
+
+    yesno(sc) {
+      const cur = getPath(sc.path);
+      const txt = getPath(sc.textPath) || '';
+      return head(sc) + `<div class="opts grid-2 yesno" role="group">
+          ${optButton(sc.path, { value: 'yes', label: t('q.yes') }, 0, cur)}${optButton(sc.path, { value: 'no', label: t('q.no') }, 1, cur)}</div>
+        ${cur === 'yes' ? `<label class="reason"><span>${esc(sc.textLabel)}</span><textarea rows="3" data-bind="${sc.textPath}">${esc(txt)}</textarea></label>` : ''}`;
+    },
+
+    final() {
+      const x = t('q.final');
+      const ch = S.feedback.channel || '';
+      return head({ title: x.title }) + `<div class="card final-card">
+          <div class="field"><span class="field-label">${esc(x.channel)} <em>${esc(t('ui.optional'))}</em></span>
+            <div class="chips">${entries(x.channels).map(([v, l]) => `<button type="button" class="chip${ch === v ? ' on' : ''}" data-choose="feedback.channel" data-value="${v}" aria-pressed="${ch === v}">${esc(l)}</button>`).join('')}</div></div>
+          <label class="field"><span class="field-label">${esc(x.open)} <em>${esc(t('ui.optional'))}</em></span><textarea rows="3" data-bind="feedback.open">${esc(S.feedback.open || '')}</textarea></label>
+          <label class="check"><input type="checkbox" data-bind="contact.ok" data-rerender${S.contact.ok ? ' checked' : ''}><span>${esc(x.contact)}</span></label>
+          ${S.contact.ok ? `<label class="field"><span class="field-label">${esc(x.email)}</span><input type="email" data-bind="contact.email" value="${esc(S.contact.email)}" autocomplete="email"></label><p class="muted small">${esc(x.contactNote)}</p>` : ''}
+          <p class="form-msg" id="form-msg" role="alert"></p></div>`;
+    },
+
+    thanks() {
+      const x = t('q.thanks');
+      return `<div class="hero-band thanks-band">${seaLayer('sea-soft')}<div class="hero-band-inner">
+          <span class="thanks-check">${ICON('check')}</span>
+          <h1 class="q-title" tabindex="-1">${esc(x.title)}</h1><p class="lede">${esc(x.body)}</p>
+          <p class="sync" id="sync-status" role="status"></p></div></div>
+        <div class="card thanks-card">
+          <p class="code num">${esc(x.code.replace('{code}', S.code))}</p><p class="muted">${esc(x.codeNote)}</p>
+          <div class="thanks-actions"><button type="button" class="btn btn-primary btn-lg" data-act="print">${ICON('download')}${esc(x.download)}</button>
+          <button type="button" class="btn btn-ghost btn-lg" data-act="newrun">${esc(x.newRun)}</button>
+          <a class="btn btn-ghost btn-lg" href="../${lang === 'en' ? '?lang=en' : ''}">${esc(x.home)}</a></div>
+          <p class="muted small">${esc(x.printHint)}</p></div>`;
     }
+  };
+
+  function selectHTML(path, options, value) {
+    return `<select data-bind="${path}">${options.map(([v, l]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   }
 
-  function mnsOutputs() {
-    const m = R.mns;
-    const any = ['qe', 'qp', 'qr'].some(k => S.mns[k] !== '');
-    const sum = $('#mns-sum'); if (sum) sum.textContent = any ? t('b2.sum', { sum: fmt(m.sum, 0) }) : '';
-    toggleWarn('#mns-warn', any && !m.valid);
-    if (!m.valid) return scoreOut($('#mns-out'), '');
-    const band = mnsBand(m.value);
-    scoreOut($('#mns-out'), scoreHTML(fmt(m.value, 0), '/100', band.name, m.value < 50 ? 'good' : m.value < 80 ? 'mid' : 'crit', band.reco, m.value, 'var(--signal)'));
+  // ---------- ottagono dei risultati ----------
+  function radarAxes() {
+    const D = R.diagnosis, B = R.baseline;
+    const ranked = R.interventions.ranked;
+    const gcsMean = ranked.length ? ranked.reduce((s, r) => s + r.gcs, 0) / ranked.length : null;
+    return [
+      ['I1', D.I1.value], ['I2', D.I2.value], ['I3', D.I3.value], ['I4', D.I4.value], ['I5', D.I5.value],
+      ['CI', B.complete ? clamp(B.CI / CI_REF * 100, 0, 100) : null],
+      ['DATA', R.dms.effective !== null ? (5 - R.dms.effective) * 20 : null],
+      ['GOV', gcsMean !== null ? (gcsMean - 1) / 4 * 100 : null]
+    ];
   }
 
-  function baselineOutputs() {
-    const B = R.baseline;
-    $$('[data-ph]').forEach(el => { el.placeholder = S.baseline[el.dataset.ph] || ''; });
-    const tot = CCF.num(S.profile.employees);
-    const sum = $('#bl-sum');
-    if (sum) {
-      const ok = tot ? Math.abs(B.N - tot) <= Math.max(1, tot * 0.05) : null;
-      sum.innerHTML = esc(t('b3.sumCheck', { sum: fmt(B.N), tot: tot ? fmt(tot) : '—' })) +
-        (tot && B.N ? ` · <span class="${ok ? 'ok' : 'bad'}">${esc(ok ? t('b3.sumOk') : t('b3.sumDiff'))}</span>` : '');
-    }
-    B.rows.forEach(row => { const c = $('#lf-' + row.id); if (c) c.textContent = row.LF === null ? '—' : fmt(row.LF * 100, 0) + '%'; });
-    const set = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
-    set('kpi-A', B.complete ? fmt(B.A / 1e6, 2) : '—');
-    set('kpi-EI', B.complete ? fmt(B.EI, 3) : '—');
-    set('kpi-CI', B.complete ? fmt(B.CI, 0) : '—');
-    set('kpi-G', B.complete ? fmt(B.tCO2e, 1) : '—');
-    const empty = $('#bl-empty'); if (empty) empty.hidden = B.complete;
-  }
-
-  function compositeOutputs(arr, key) {
-    const c = R[arr];
-    const cov = $('#' + arr + '-cov');
-    if (cov) cov.textContent = t('common.coverage', { a: c.answered, t: c.total }) + (c.pending ? ' · ' + t('common.pending', { n: c.pending }) : '');
-    toggleWarn('#' + arr + '-low', c.value !== null && !c.reliable);
-    if (c.value === null) return scoreOut($('#' + arr + '-out'), '');
-    const idx = fourBand(c.value), band = t(key + '.bands')[idx];
-    const cls = arr === 'acc' ? ['crit', 'mid', 'good', 'good'][idx] : ['good', 'mid', 'crit', 'crit'][idx];
-    const color = arr === 'acc' ? (c.value >= 60 ? 'var(--signal)' : 'var(--coral)') : 'var(--coral)';
-    scoreOut($('#' + arr + '-out'), scoreHTML(fmt(c.value, 0), '/100', band.name, cls, band.reco, c.value, color));
-  }
-
-  function diagnosisOutputs() {
-    const D = R.diagnosis;
-    CODES.forEach(code => {
-      const x = D[code];
-      const badge = $('#badge-' + code);
-      if (badge) {
-        badge.className = 'diag-badge ' + (x.value === null ? 'na' : 'b' + x.band);
-        badge.textContent = x.value === null ? t('common.notAvailable') : `${x.value}/100 · ${t('common.bands')[x.band - 1]}${!x.direct && !x.reliable ? ' · ' + t('common.lowReliability') : ''}`;
-      }
-      const row = $('#diag-' + code); if (row) row.classList.toggle('edited', x.overridden);
-      const why = $('#why-' + code);
-      if (why) {
-        if (x.derived === null) why.textContent = t('b6.missing.' + code);
-        else {
-          const src = { I1: R.cdr.value, I4: R.acc.value, I5: R.mns.value }[code];
-          let txt = t('b6.why.' + code, { v: fmt(src, 0) });
-          if (x.coherenceRule) txt += ' ' + t('b6.rule', { d: fmt(R.baseline.daysWeek, 1) });
-          if (x.overridden) txt += ` · ${t('b6.corrected')}: ${x.derived} → ${x.value}`;
-          why.textContent = txt;
-        }
-      }
+  function radarSVG(animated) {
+    const axes = radarAxes();
+    const labels = t('q.results.axes');
+    const N = axes.length, cx = 280, cy = 212, Rr = 138;
+    const ang = i => -Math.PI / 2 + i * 2 * Math.PI / N;
+    const pt = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
+    const poly = r => axes.map((_, i) => pt(i, r).map(v => v.toFixed(1)).join(',')).join(' ');
+    const sevColor = v => ['#10B981', '#84CC16', '#F59E0B', '#F97316', '#DC2626'][CCF.band(v) - 1];
+    let g = '';
+    [0.2, 0.4, 0.6, 0.8, 1].forEach(k => { g += `<polygon points="${poly(Rr * k)}" class="ring${k === 1 ? ' outer' : ''}"/>`; });
+    axes.forEach((_, i) => { const [x, y] = pt(i, Rr); g += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="spoke"/>`; });
+    const shape = axes.map(([, v], i) => pt(i, Rr * (v === null ? 0 : v) / 100).map(n => n.toFixed(1)).join(',')).join(' ');
+    g += `<g class="shape${animated ? ' animate' : ''}" style="transform-origin:${cx}px ${cy}px"><polygon points="${shape}" class="area"/>`;
+    axes.forEach(([, v], i) => {
+      if (v === null) return;
+      const [x, y] = pt(i, Rr * v / 100);
+      g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" class="vertex" style="stroke:${sevColor(v)}"/>`;
     });
-    const h2 = $('#hint-I2');
-    if (h2) { const sh = R.baseline.rows.find(r => r.id === 'shuttle'); h2.textContent = sh && sh.n > 0 ? t('b6.hints.I2', { n: fmt(sh.n) }) : t('b6.hints.I2none'); }
-    const h3 = $('#hint-I3');
-    if (h3) {
-      const label = (arr, key) => {
-        const v = S[arr][3];
-        if (v === '' || v === undefined) return '—';
-        if (v === 'nd') return t('common.notAvailable');
-        return t(key + '.items')[3][1][5 - Number(v)];
-      };
-      h3.textContent = t('b6.hints.I3', { a: label('acc', 'b4'), b: label('cdr', 'b5'), c: S.profile.shiftPct !== '' ? S.profile.shiftPct + '%' : '—' });
-    }
-    $$('.rubric-opt').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
-    const p = R.prevailing;
-    scoreOut($('#prev-out'), p.length ? `<div class="band"><div class="reco">${esc(t('b6.prevailing'))}</div><div class="name crit">${p.map(c => `${c} · ${esc(t('b6.names')[c])} (${D[c].value}/100)`).join(' · ')}</div></div>` : '');
-  }
-
-  function interventionOutputs() {
-    const b = k => t('b7.' + k);
-    R.interventions.list.forEach(x => {
-      const card = $('#intv-' + x.id);
-      if (!card || !x.selected) return;
-      const e = x.estimate;
-      const lab = $('#lever-label-' + x.id);
-      if (lab && x.scenario) {
-        const sc = x.scenario;
-        lab.textContent = sc.type === 'shift' ? b('lever').shift.replace('{to}', t('modes.' + (e.target || sc.to[0])))
-          : sc.type === 'cut' ? b('lever').cut
-          : sc.base === 'acr' ? b('lever').avoid_acr.replace('{acr}', R.acr ? fmt(R.acr.ACR * 100, 0) : '—') : b('lever').avoid_total;
-      }
-      const est = $('#est-' + x.id);
-      if (est) {
-        if (!e.estimable) est.textContent = b('reasons')[e.reason] || '';
-        else if (e.dG <= 0) est.textContent = b('estimateNeg').replace('{t}', fmt(e.dG / 1e6, 1));
-        else est.textContent = b('estimate').replace('{t}', fmt(e.dG / 1e6, 1)).replace('{p}', fmt(x.dGpct, 1)).replace('{i}', x.impactProposed);
-        est.classList.toggle('muted', !e.estimable);
-      }
-      const setSelect = (dim, value, marker, maxAllowed) => {
-        const sel = $(`#${fid('interventions.' + x.id + '.' + dim)}`);
-        if (!sel) return;
-        sel.value = value === null || value === undefined ? '' : String(value);
-        Array.from(sel.options).forEach(o => {
-          if (!o.value) return;
-          const i = Number(o.value);
-          o.textContent = b('answers')[dim][i - 1] + (marker === i ? ' · ' + b('proposed') : '');
-          o.disabled = !!(maxAllowed && i > maxAllowed);
-        });
-      };
-      setSelect('impact', x.impact, x.impactProposed);
-      setSelect('data', x.data, null, x.dataCap ? 2 : 0);
-      setSelect('acc', x.acc);
-      setSelect('cost', x.cost);
-      setSelect('gcs', x.gcs, x.gcsDefault);
-      const sub = (dim, text, alert) => { const el = $(`#sub-${x.id}-${dim}`); if (el) { el.textContent = text; el.classList.toggle('alert', !!alert); } };
-      sub('impact', x.impactOverridden && x.impactProposed !== null ? `${b('proposed')}: ${x.impactProposed}/5` : '');
-      sub('data', x.dataCap ? b('capped') : '');
-      sub('gcs', x.governancePlan ? b('govPlan') : '', true);
-      const out = $('#ipi-' + x.id);
-      if (out) {
-        if (x.ipi === null) { out.className = 'ipiout pending'; out.innerHTML = `<span class="verdict">${esc(b('incomplete'))}</span>`; }
-        else { out.className = 'ipiout'; out.innerHTML = `<span class="num">${fmt(x.ipi, 1)}</span><span class="prio ${x.cls}">${esc(b('priority'))} ${x.cls}</span><span class="verdict">${esc(b('cls')[x.cls])}</span>`; }
-      }
+    g += '</g>';
+    axes.forEach(([key, v], i) => {
+      const [x, y] = pt(i, Rr + 34);
+      const cos = Math.cos(ang(i));
+      const anchor = Math.abs(cos) < 0.2 ? 'middle' : cos > 0 ? 'start' : 'end';
+      const words = labels[key].split(' ');
+      const lines = words.length > 1 && labels[key].length > 14 ? [words.slice(0, Math.ceil(words.length / 2)).join(' '), words.slice(Math.ceil(words.length / 2)).join(' ')] : [labels[key]];
+      const dy = y < cy - 20 ? -((lines.length - 1) * 14) - 6 : y > cy + 20 ? 10 : -((lines.length - 1) * 7);
+      g += `<text x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}" class="axis-label axis-full">${lines.map((l, k) => `<tspan x="${x.toFixed(1)}" dy="${k === 0 ? 0 : 14}">${esc(l)}</tspan>`).join('')}<tspan x="${x.toFixed(1)}" dy="15" class="axis-value">${v === null ? 'n.d.' : Math.round(v)}</tspan></text>`;
+      // sugli schermi stretti: sigla e valore grandi, con la legenda sotto il grafico
+      const [sx, sy] = pt(i, Rr + 30);
+      g += `<text x="${sx.toFixed(1)}" y="${(sy + 8).toFixed(1)}" text-anchor="${anchor}" class="axis-short">${esc(RADAR_SHORT[key])} ${v === null ? '–' : Math.round(v)}</text>`;
     });
+    const legend = axes.map(([key, v]) => `<span><strong>${esc(RADAR_SHORT[key])}</strong> ${esc(labels[key])}</span>`).join('');
+    return `<svg class="radar" viewBox="0 0 560 434" role="img" aria-label="${esc(t('q.results.title'))}">${g}</svg><div class="radar-legend">${legend}</div>`;
   }
 
-  // ---------- rendering e navigazione ----------
-  function renderChrome() {
+  // ---------- rendering ----------
+  let currentList = [];
+  function current() { return currentList.find(s => s.id === S.pos); }
+
+  function render(direction) {
+    R = evaluate();
+    currentList = screens();
+    let idx = currentList.findIndex(s => s.id === S.pos);
+    if (idx < 0) {
+      // la schermata non esiste più (per esempio un intervento deselezionato): torna all'inizio del capitolo
+      const ch = S.pos.startsWith('iv:') ? 7 : 0;
+      idx = Math.max(0, currentList.findIndex(s => s.ch === ch));
+      S.pos = currentList[idx].id;
+    }
+    if (!S.consent && idx > 0) { idx = 0; S.pos = 'intro'; }
+    const sc = currentList[idx];
+    renderChrome(sc);
+    const body = VIEWS[sc.kind](sc, currentList);
+    const nav = navHTML(sc, idx);
+    const app = $('#app');
+    // la navigazione sta fuori dalla sezione animata: un antenato con transform ne romperebbe il position:fixed
+    app.innerHTML = `<section class="screen kind-${sc.kind} ${direction === 'back' ? 'enter-back' : 'enter'}" data-screen="${esc(sc.id)}">${body}</section>${nav}`;
+    liveUpdate();
+    const h = $('.q-title', app);
+    if (h && direction) h.focus({ preventScroll: true });
+    if (direction) window.scrollTo(0, 0);
+  }
+
+  function navHTML(sc, idx) {
+    if (sc.kind === 'thanks') return '';
+    const ok = answered(sc);
+    const back = idx > 0 ? `<button type="button" class="btn btn-ghost" data-act="back">${ICON('arrowLeft')}${esc(t('ui.back'))}</button>` : '<span></span>';
+    let label = t('ui.next'), act = 'next';
+    if (sc.kind === 'intro') label = t('ui.start');
+    else if (sc.kind === 'chapter') label = t('ui.startChapter');
+    else if (sc.kind === 'results') label = t('q.results.toEval');
+    else if (sc.kind === 'final') { label = t('q.final.submit'); act = 'submit'; }
+    const hint = sc.kind === 'choice' || sc.kind === 'scale' || sc.kind === 'truth' || sc.kind === 'ineff' ? `<span class="q-hint">${esc(t('ui.keysHint'))}</span>` : `<span class="q-hint">${esc(t('ui.saved'))}</span>`;
+    return `<nav class="q-nav">${back}${hint}<button type="button" class="btn btn-primary btn-lg" data-act="${act}" id="next-btn"${ok ? '' : ' disabled'}>${esc(label)}${ICON('arrowRight')}</button></nav>`;
+  }
+
+  function renderChrome(sc) {
     document.documentElement.lang = lang;
     document.title = t('meta.title');
     const md = $('meta[name="description"]'); if (md) md.setAttribute('content', t('meta.description'));
+    $$('.lang-switch button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
     $$('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n, { v: CCF.VERSION }); });
-    $$('.lang button').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.lang === lang)));
+    const fab = $('#help-fab .sr-only'); if (fab) fab.textContent = t('ui.helpAria');
+    const home = $('#brand-link'); if (home) home.setAttribute('href', '../' + (lang === 'en' ? '?lang=en' : ''));
+    // barra di avanzamento per capitoli
+    const rail = $('#rail');
+    rail.hidden = sc.ch < 1;
+    const chNow = Math.min(Math.max(sc.ch, 1), TOTAL_CH);
+    const inCh = currentList.filter(s => s.ch === sc.ch);
+    const pos = Math.max(0, inCh.findIndex(s => s.id === sc.id));
+    const bars = [];
+    for (let c = 1; c <= TOTAL_CH; c++) {
+      const w = sc.ch > TOTAL_CH || c < chNow ? 100 : c > chNow ? 0 : Math.round((pos + 1) / Math.max(1, inCh.length) * 100);
+      bars.push(`<i><b style="width:${w}%"></b></i>`);
+    }
+    rail.innerHTML = `<div class="rail-label"><span class="num">${esc(t('ui.chapterOf', { n: chNow, t: TOTAL_CH }))}</span><span class="rail-name">${esc(t('chapters')[chNow])}</span></div><div class="rail-bars" aria-hidden="true">${bars.join('')}</div>`;
   }
 
-  function renderStepper() {
-    const names = t('steps');
-    $('#stepper').innerHTML = '<ol>' + names.map((name, i) => {
-      const cur = i === S.step;
-      const enabled = i === 0 || (S.consent && i <= S.maxStep);
-      return `<li><button type="button" data-action="go" data-step="${i}"${cur ? ' aria-current="step"' : ''} class="${!cur && enabled && i <= S.maxStep ? 'done' : ''}"${enabled ? '' : ' disabled'}><span class="n">${i}</span><span class="l">${esc(name)}</span></button></li>`;
-    }).join('') + '</ol>';
-    const cur = $('#stepper [aria-current="step"]');
-    const list = $('#stepper ol');
-    if (cur && list) list.scrollLeft = cur.parentElement.offsetLeft - list.clientWidth / 2 + cur.clientWidth / 2;
+  // Aggiornamenti in tempo reale che non ridisegnano la schermata (così i cursori non si interrompono).
+  function liveUpdate() {
+    const sc = current();
+    if (!sc) return;
+    const btn = $('#next-btn');
+    if (btn) btn.disabled = !answered(sc);
+    if (sc.kind === 'intro') { const need = $('#consent-need'); if (need) need.hidden = !!S.consent; }
+    if (sc.kind === 'percent') { const v = getPath(sc.path); const el = $('#pct-value'); if (el) el.innerHTML = `${has(v) ? fmt(Number(v)) : '—'}<span>%</span>`; }
+    if (sc.kind === 'distance') { const v = CCF.num(S.baseline.oneWay); const el = $('#dist-value'); if (el) el.innerHTML = `${v === null ? '—' : fmt(v, v % 1 ? 1 : 0)}<span> km</span>`; }
+    if (sc.kind === 'modes') modesLive();
+    if (sc.kind === 'modeDistances') R.baseline.rows.forEach(r => { const el = $('#dv-' + r.id); if (el) { const v = r.oneWay; el.textContent = `${fmt(v, v % 1 ? 1 : 0)} km`; } });
+    if (sc.kind === 'iv') ivLive(sc);
+    if (sc.kind === 'thanks') syncStatus();
   }
 
-  function render() {
-    R = evaluate();
-    renderChrome();
-    renderStepper();
-    $('#app').innerHTML = STEPS[S.step]();
-    updateOutputs();
-    updateSyncStatus();
+  function modesLive() {
+    const x = t('q.modes');
+    const B = R.baseline;
+    const tot = CCF.num(S.profile.employees);
+    const stack = $('#modes-stack');
+    if (stack) {
+      const denom = Math.max(B.N, tot || 0, 1);
+      stack.innerHTML = B.rows.filter(r => r.n > 0).map(r => `<i style="width:${r.n / denom * 100}%;background:${MODE_COLOR[r.id]}" title="${esc(t('options.modes')[r.id])}: ${fmt(r.n)}"></i>`).join('');
+    }
+    const assigned = $('#modes-assigned');
+    if (assigned) {
+      let s = x.assigned.replace('{sum}', fmt(B.N)).replace('{tot}', tot ? fmt(tot) : '—');
+      if (tot && B.N < tot) s += ' · ' + x.remaining.replace('{n}', fmt(tot - B.N));
+      if (tot && B.N > tot) s += ' · ' + x.over.replace('{n}', fmt(B.N - tot));
+      assigned.textContent = s;
+      assigned.className = tot && B.N > tot ? 'over' : '';
+    }
+    const teaser = $('#modes-teaser');
+    if (teaser) teaser.textContent = B.complete ? x.teaser.replace('{t}', fmt(B.tCO2e, 1)) : x.teaserNone;
+    B.rows.forEach(r => {
+      const tile = $(`[data-tile="${r.id}"]`); if (tile) tile.classList.toggle('on', r.n > 0);
+      const lf = $('#lf-' + r.id); if (lf) lf.textContent = r.LF === null ? '—' : fmt(r.LF * 100, 0) + '%';
+    });
+    $$('.fill-rest').forEach(b => { b.hidden = !(tot && B.N < tot); });
   }
 
-  function goTo(step) {
-    step = Math.max(0, Math.min(LAST_STEP, step));
-    if (step > 0 && !S.consent) return;
+  function ivLive(sc) {
+    const x = t('q.iv');
+    const r = ivResult(sc.ivId);
+    if (!r) return;
+    const e = r.estimate;
+    const dg = $('#iv-dg'), pct = $('#iv-pct'), unit = $('#iv-unit');
+    if (dg) {
+      if (!e.estimable) { dg.textContent = '—'; unit.textContent = x.reasons[e.reason] || ''; pct.textContent = ''; }
+      else if (e.dG <= 0) { dg.textContent = fmt(0); unit.textContent = x.negative; pct.textContent = ''; }
+      else { countTo(dg, e.dG / 1e6, 1); unit.textContent = x.unit; pct.textContent = x.pct.replace('{p}', fmt(r.dGpct, 1)); }
+    }
+    const lab = $('#iv-lever-label');
+    if (lab && r.scenario) {
+      const sc2 = r.scenario, p = Math.round((e.lever !== undefined ? e.lever : sc2.lever) * 100);
+      lab.textContent = sc2.type === 'shift' ? x.lever.shift.replace('{pct}', p).replace('{to}', t('options.modes')[e.target || sc2.to[0]])
+        : sc2.type === 'cut' ? x.lever.cut.replace('{pct}', p)
+        : sc2.base === 'acr' ? x.lever.avoid_acr.replace('{pct}', p).replace('{acr}', R.acr ? fmt(R.acr.ACR * 100, 0) : '—') : x.lever.avoid_total.replace('{pct}', p);
+    }
+    const values = { cost: r.cost, acc: r.acc, data: r.data, gcs: r.gcs, impact: r.impact };
+    Object.keys(values).forEach(dim => {
+      $$(`[data-ivset="${sc.ivId}"][data-dim="${dim}"]`).forEach(b => {
+        const v = Number(b.dataset.value);
+        b.setAttribute('aria-pressed', String(values[dim] === v));
+        b.classList.toggle('preset', (dim === 'gcs' && v === r.gcsDefault) || (dim === 'impact' && v === r.impactProposed));
+        b.disabled = dim === 'data' && r.dataCap && v > 2;
+      });
+    });
+    const note = (id, text) => { const el = $('#note-' + id); if (el) el.textContent = text; };
+    note('data', r.dataCap ? x.capped : '');
+    note('gcs', r.governancePlan ? x.govPlan : '');
+    const sg = $('#sum-gcs'); if (sg) sg.textContent = r.gcs ? x.gcs[r.gcs - 1] : '—';
+    const si = $('#sum-impact'); if (si) si.textContent = r.impact ? x.impact[r.impact - 1] : '—';
+    const res = $('#iv-result');
+    if (res) {
+      res.className = 'iv-result' + (r.ipi === null ? ' pending' : ' cls-' + r.cls);
+      res.innerHTML = r.ipi === null ? `<span>${esc(x.pending)}</span>`
+        : `<span class="prio ${r.cls}">${r.cls}</span><div><strong>${esc(x.priority.replace('{c}', r.cls))}</strong><span>${esc(x.cls[r.cls])} · ${esc(x.ipi.replace('{v}', fmt(r.ipi, 1)))}</span></div>`;
+    }
+    const btn = $('#next-btn'); if (btn) btn.disabled = r.ipi === null;
+  }
+
+  function countTo(el, target, digits) {
+    const from = Number(el.dataset.v || 0);
+    el.dataset.v = target;
+    const start = performance.now(), dur = 450;
+    const step = now => {
+      const k = Math.min(1, (now - start) / dur);
+      el.textContent = fmt(from + (target - from) * (1 - Math.pow(1 - k, 3)), digits);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ---------- navigazione ----------
+  function go(delta) {
+    clearTimeout(autoTimer);
+    const idx = currentList.findIndex(s => s.id === S.pos);
+    const sc = currentList[idx];
+    if (delta > 0 && sc && !answered(sc)) return;
+    const next = clamp(idx + delta, 0, currentList.length - 1);
+    if (next === idx) return;
+    const target = currentList[next];
     const now = Date.now();
-    S.timings[S.step] = Math.round((S.timings[S.step] || 0) + (now - enteredAt) / 1000);
+    if (sc) S.timings[sc.ch] = Math.round((S.timings[sc.ch] || 0) + (now - enteredAt) / 1000);
     enteredAt = now;
-    S.step = step;
-    S.maxStep = Math.max(S.maxStep, step);
-    if (!S.reached[step]) { S.reached[step] = true; beacon(step); }
+    S.pos = target.id;
+    if (target.ch <= TOTAL_CH) S.maxCh = Math.max(S.maxCh, target.ch);
+    if (S.consent && !S.reached[target.ch] && target.ch <= TOTAL_CH) { S.reached[target.ch] = true; beacon(target.ch); }
+    if (target.kind === 'results') queueAssessment();
     persist();
-    render();
-    const top = $('#stepper').offsetTop;
-    if (window.scrollY > top) window.scrollTo(0, top);
-    if (step === RESULTS_STEP) queueAssessment();
+    render(delta < 0 ? 'back' : 'fwd');
+  }
+
+  function scheduleNext() {
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => go(1), 380);
   }
 
   function reset() {
@@ -677,83 +845,272 @@
     S.outbox = pending;
     enteredAt = Date.now();
     persist();
-    render();
-    window.scrollTo(0, 0);
+    render('back');
   }
 
   // ---------- eventi ----------
+  function afterChange(rerender) {
+    R = evaluate();
+    persist();
+    if (rerender) {
+      const y = window.scrollY;
+      render();
+      window.scrollTo(0, y);
+    } else {
+      currentList = screens();
+      liveUpdate();
+    }
+  }
+
+  function onClick(e) {
+    const el = e.target.closest('[data-act],[data-choose],[data-set],[data-step],[data-mstep],[data-fill],[data-toggle-iv],[data-ivset]');
+    if (!el || el.disabled) return;
+    const sc = current();
+
+    if (el.dataset.choose) return choose(el, sc);
+    if (el.dataset.set) {
+      setPath(el.dataset.set, String(el.dataset.value));
+      afterChange(true);
+      return;
+    }
+    if (el.dataset.step) {
+      const path = el.dataset.step;
+      const v = CCF.num(getPath(path)) || 0;
+      const inc = v >= 1000 ? 50 : v >= 200 ? 10 : 1;
+      setPath(path, String(Math.max(1, v + Number(el.dataset.d) * inc)));
+      const input = $(`[data-bind="${path}"]`); if (input) input.value = getPath(path);
+      afterChange(false);
+      return;
+    }
+    if (el.dataset.mstep) {
+      const id = el.dataset.mstep;
+      const path = `baseline.modes.${id}.n`;
+      const v = CCF.num(getPath(path)) || 0;
+      setPath(path, String(Math.max(0, v + Number(el.dataset.d))));
+      const input = $(`[data-bind="${path}"]`); if (input) input.value = getPath(path);
+      afterChange(false);
+      return;
+    }
+    if (el.dataset.fill) {
+      const id = el.dataset.fill;
+      const tot = CCF.num(S.profile.employees) || 0;
+      const rest = tot - R.baseline.N;
+      if (rest > 0) {
+        const path = `baseline.modes.${id}.n`;
+        setPath(path, String((CCF.num(getPath(path)) || 0) + rest));
+        const input = $(`[data-bind="${path}"]`); if (input) input.value = getPath(path);
+        afterChange(false);
+      }
+      return;
+    }
+    if (el.dataset.toggleIv) {
+      const id = el.dataset.toggleIv;
+      const cur = ivResult(id);
+      setPath(`interventions.${id}.selected`, !(cur && cur.selected));
+      el.setAttribute('aria-pressed', String(!(cur && cur.selected)));
+      afterChange(false);
+      return;
+    }
+    if (el.dataset.ivset) {
+      const id = el.dataset.ivset, dim = el.dataset.dim;
+      let value = String(el.dataset.value);
+      const r = ivResult(id);
+      // scegliere il valore proposto dal framework non è una correzione: resta automatico
+      if (dim === 'impact' && r && String(r.impactProposed) === value) value = '';
+      if (dim === 'gcs' && r && String(r.gcsDefault) === value) value = '';
+      setPath(`interventions.${id}.${dim}`, value);
+      afterChange(false);
+      return;
+    }
+
+    const act = el.dataset.act;
+    if (act === 'next') go(1);
+    else if (act === 'back') go(-1);
+    else if (act === 'resume') { S.pos = currentList.filter(s => s.ch === Math.min(S.maxCh, TOTAL_CH))[0].id; persist(); render('fwd'); }
+    else if (act === 'restart') { if (window.confirm(t('ui.restartConfirm'))) reset(); }
+    else if (act === 'newrun') { if (window.confirm(t('q.thanks.newConfirm'))) reset(); }
+    else if (act === 'privacy') openPrivacy();
+    else if (act === 'closePrivacy') $('#privacy').close();
+    else if (act === 'print') printReport();
+    else if (act === 'submit') submit();
+    else if (act === 'mnsConfirm') { setMns(50, 80); afterChange(true); }
+    else if (act === 'ineffSkip') {
+      const code = el.dataset.code;
+      S.skipped[code] = true;
+      if (DIRECT.includes(code)) S.direct[code] = '';
+      afterChange(false);
+      scheduleNext();
+    }
+  }
+
+  function choose(el, sc) {
+    const path = el.dataset.choose;
+    const value = el.dataset.value;
+    if (path.startsWith('ineff.')) {
+      const code = path.split('.')[1];
+      delete S.skipped[code];
+      if (DIRECT.includes(code)) S.direct[code] = value;
+      else {
+        const d = R.diagnosis[code];
+        const derivedBand = d.derived !== null ? CCF.band(d.derived) : null;
+        if (derivedBand === Number(value)) delete S.overrides[code];
+        else S.overrides[code] = { value: String(CCF.BAND_VALUES[Number(value) - 1]), note: (S.overrides[code] && S.overrides[code].note) || '' };
+      }
+      const needsReason = !DIRECT.includes(code) && !!S.overrides[code] && R.diagnosis[code].derived !== null;
+      afterChange(true);
+      if (!needsReason) scheduleNext();
+      return;
+    }
+    setPath(path, value);
+    if (path === 'baseline.daysWeek') S.baseline.days = String(Number(value) * 44);
+    $$(`[data-choose="${CSS.escape(path)}"]`).forEach(b => { b.setAttribute('aria-pressed', String(b === el)); b.classList.toggle('on', b === el); });
+    if (sc.kind === 'yesno') { afterChange(true); if (value === 'no') scheduleNext(); return; }
+    afterChange(false);
+    if (sc.auto) scheduleNext();
+  }
+
   function onInput(e) {
     const el = e.target.closest('[data-bind]');
-    if (!el || el.type === 'radio' || el.type === 'checkbox' || el.tagName === 'SELECT') return;
+    if (!el || el.type === 'checkbox' || el.tagName === 'SELECT') return;
     setPath(el.dataset.bind, el.value);
+    if (el.type === 'range') el.classList.remove('unset');
     afterChange(false);
   }
 
   function onChange(e) {
     const el = e.target.closest('[data-bind]');
     if (!el) return;
-    const path = el.dataset.bind;
-    let value = el.type === 'checkbox' ? el.checked : el.value;
-    // Scegliere il valore proposto dal framework non è una correzione: resta automatico.
-    const m = path.match(/^interventions\.(\w+)\.(impact|gcs)$/);
-    if (m) {
-      const x = R.interventions.list.find(i => i.id === m[1]);
-      const ref = x ? (m[2] === 'impact' ? x.impactProposed : x.gcsDefault) : null;
-      if (ref !== null && String(ref) === String(value)) value = '';
-    }
-    setPath(path, value);
+    setPath(el.dataset.bind, el.type === 'checkbox' ? el.checked : el.value);
     afterChange(el.hasAttribute('data-rerender'));
   }
 
-  function afterChange(rerender) {
-    R = evaluate();
-    persist();
-    if (rerender) { const y = window.scrollY; render(); window.scrollTo(0, y); }
-    else updateOutputs();
+  // Barra della presenza necessaria: due cursori trascinabili, anche da tastiera.
+  function setMns(a, b) {
+    a = clamp(Math.round(a / 5) * 5, 0, 100);
+    b = clamp(Math.round(b / 5) * 5, a, 100);
+    S.mns = { qe: String(a), qp: String(b - a), qr: String(100 - b) };
+  }
+  function paintMns() {
+    const wrap = $('#split3');
+    if (!wrap) return;
+    const qe = Number(S.mns.qe), qp = Number(S.mns.qp), qr = Number(S.mns.qr);
+    wrap.classList.remove('preview');
+    const segs = $$('.seg', wrap);
+    [qe, qp, qr].forEach((v, i) => { segs[i].style.width = v + '%'; $('.seg-v', segs[i]).textContent = v + '%'; const l = $('#leg-' + i); if (l) l.textContent = v + '%'; });
+    const hs = $$('.handle', wrap);
+    hs[0].style.left = qe + '%'; hs[0].setAttribute('aria-valuenow', qe);
+    hs[1].style.left = (qe + qp) + '%'; hs[1].setAttribute('aria-valuenow', qe + qp);
+    const confirm = $('.confirm-default'); if (confirm) confirm.hidden = true;
+  }
+  function mnsBounds() {
+    const valid = R.mns.valid;
+    const a = valid ? Number(S.mns.qe) : 50;
+    return [a, valid ? a + Number(S.mns.qp) : 80];
+  }
+  function onPointerDown(e) {
+    const h = e.target.closest('.handle');
+    if (!h) return;
+    e.preventDefault();
+    const wrap = $('#split3');
+    const idx = Number(h.dataset.h);
+    h.setPointerCapture(e.pointerId);
+    const move = ev => {
+      const rect = wrap.getBoundingClientRect();
+      const p = clamp((ev.clientX - rect.left) / rect.width * 100, 0, 100);
+      let [a, b] = mnsBounds();
+      if (idx === 0) a = Math.min(p, b); else b = Math.max(p, a);
+      setMns(a, b);
+      R = evaluate();
+      paintMns();
+      liveUpdate();
+    };
+    const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); persist(); };
+    h.addEventListener('pointermove', move);
+    h.addEventListener('pointerup', up);
+    move(e);
   }
 
-  function onClick(e) {
-    const el = e.target.closest('[data-action]');
-    if (!el) return;
-    const a = el.dataset.action;
-    if (a === 'next') goTo(S.step + 1);
-    else if (a === 'back') goTo(S.step - 1);
-    else if (a === 'go') goTo(Number(el.dataset.step));
-    else if (a === 'privacy') openPrivacy();
-    else if (a === 'closePrivacy') $('#privacy').close();
-    else if (a === 'restart') { if (window.confirm(t('intro.restartConfirm'))) reset(); }
-    else if (a === 'newrun') { if (window.confirm(t('thanks.newConfirm'))) reset(); }
-    else if (a === 'print') printReport();
-    else if (a === 'submit') submitFeedback();
+  function onKey(e) {
+    if ($('#help-drawer').classList.contains('open')) { if (e.key === 'Escape') closeHelp(); return; }
+    if ($('#privacy').open) return;
+    const tag = e.target.tagName;
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    const h = e.target.closest && e.target.closest('.handle');
+    if (h && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End')) {
+      e.preventDefault();
+      let [a, b] = mnsBounds();
+      const d = e.key === 'ArrowLeft' ? -5 : e.key === 'ArrowRight' ? 5 : e.key === 'Home' ? -100 : 100;
+      if (h.dataset.h === '0') a = clamp(a + d, 0, b); else b = clamp(b + d, a, 100);
+      setMns(a, b); R = evaluate(); paintMns(); liveUpdate(); persist();
+      return;
+    }
+    if (typing || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === 'Enter' && !e.target.closest('button,a,summary,label')) {
+      const btn = $('#next-btn'); if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+      return;
+    }
+    if (/^[1-9]$/.test(e.key)) {
+      const opts = $$('#app .opts [data-choose]');
+      const b = opts[Number(e.key) - 1];
+      if (b) { e.preventDefault(); b.click(); }
+      return;
+    }
+    if (e.key === '0') { const dk = $('#app [data-dontknow]'); if (dk) { e.preventDefault(); dk.click(); } }
   }
 
   function setLang(l) {
     if (l === lang) return;
     lang = l;
+    try { localStorage.setItem('ccf-lang', l); } catch (e) { /* preferenza non salvabile */ }
     persist();
     render();
+    if ($('#help-drawer').classList.contains('open')) openHelp();
     if ($('#privacy').open) openPrivacy();
+  }
+
+  // ---------- aiuto "?" ----------
+  let lastFocus = null;
+  function openHelp() {
+    const sc = current();
+    const H = t('help');
+    let title, body, fw;
+    if (sc.kind === 'chapter') {
+      title = t('chapterIntro')[sc.ch].title; body = H.chapter.body; fw = H.chapterFw[sc.ch];
+    } else {
+      const h = H[sc.help] || H.intro;
+      title = h.title; body = h.body; fw = h.fw ? h.fw.replace('{k}', sc.helpVars ? sc.helpVars.k : '') : '';
+    }
+    $('#help-body').innerHTML = `<h3 id="help-title">${esc(title)}</h3>${(body || []).map(p => `<p>${esc(p)}</p>`).join('')}
+      ${fw ? `<div class="help-fw"><strong>${esc(t('ui.helpFw'))}</strong>${esc(fw)}</div>` : ''}`;
+    $('#help-eyebrow').textContent = t('ui.helpEyebrow');
+    $('.help-close').setAttribute('aria-label', t('ui.close'));
+    if (!$('#help-drawer').classList.contains('open')) lastFocus = document.activeElement;
+    $('#help-drawer').classList.add('open');
+    setTimeout(() => $('.help-close').focus(), 60);
+  }
+  function closeHelp() {
+    $('#help-drawer').classList.remove('open');
+    if (lastFocus) lastFocus.focus({ preventScroll: true });
   }
 
   // ---------- informativa e richieste ----------
   function openPrivacy() {
     const p = k => t('privacy.' + k);
     const dlg = $('#privacy');
-    dlg.innerHTML = `<div class="dlg"><div class="dlg-head"><h2 id="privacy-title">${esc(p('title'))}</h2><button type="button" class="dlg-x" data-action="closePrivacy" aria-label="${esc(p('close'))}">×</button></div>
+    dlg.innerHTML = `<div class="dlg"><div class="dlg-head"><h2 id="privacy-title">${esc(p('title'))}</h2><button type="button" class="help-close" data-act="closePrivacy" aria-label="${esc(p('close'))}">${ICON('close')}</button></div>
       <div class="dlg-body">${p('sections').map(([h, txt]) => `<h3>${esc(h)}</h3><p>${esc(txt)}</p>`).join('')}
-        ${authorsLine()}
+        <p class="dlg-authors"><strong>${esc(p('authors'))}:</strong> ${esc(CONTENT.authors.map(a => a.name).join(', '))}</p>
         <form class="request" id="request-form" novalidate><h3>${esc(p('requestTitle'))}</h3>
           <div class="grid2">
-            <div class="field"><label for="rq-code">${esc(p('requestCode'))}</label><input id="rq-code" name="code" type="text" value="${esc(S.code || '')}"></div>
-            <div class="field"><label for="rq-kind">${esc(p('requestKind'))}</label><select id="rq-kind" name="kind">${entries(p('requestKinds')).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></div>
+            <label class="field"><span class="field-label">${esc(p('requestCode'))}</span><input name="code" type="text" value="${esc(S.code || '')}"></label>
+            <label class="field"><span class="field-label">${esc(p('requestKind'))}</span><select name="kind">${entries(p('requestKinds')).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
           </div>
-          <div class="field"><label for="rq-message">${esc(p('requestMessage'))}</label><textarea id="rq-message" name="message" rows="3"></textarea></div>
-          <div class="field"><label for="rq-email">${esc(p('requestEmail'))}</label><input id="rq-email" name="email" type="email" autocomplete="email"></div>
+          <label class="field"><span class="field-label">${esc(p('requestMessage'))}</span><textarea name="message" rows="3"></textarea></label>
+          <label class="field"><span class="field-label">${esc(p('requestEmail'))}</span><input name="email" type="email" autocomplete="email"></label>
           <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <div class="actions"><button type="submit" class="btn primary">${esc(p('requestSend'))}</button></div>
-          <p class="note" id="rq-out" role="status"></p>
-        </form></div>
-      <div class="dlg-foot"><button type="button" class="btn ghost" data-action="closePrivacy">${esc(p('close'))}</button></div></div>`;
+          <button type="submit" class="btn btn-primary">${esc(p('requestSend'))}</button>
+          <p class="muted small" id="rq-out" role="status"></p>
+        </form></div></div>`;
     if (!dlg.open) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
   }
 
@@ -772,9 +1129,9 @@
   }
 
   // ---------- invio dati ----------
-  // Apps Script esegue doPost e poi risponde con un redirect verso la pagina del risultato,
-  // che può impiegare decine di secondi. Il redirect basta a sapere che la riga è stata scritta:
-  // con redirect 'manual' non lo seguiamo, e keepalive porta a termine l'invio anche se la pagina si chiude.
+  // Apps Script esegue doPost e poi risponde con un redirect verso la pagina del risultato, che può impiegare
+  // decine di secondi. Il redirect basta a sapere che la riga è scritta: con redirect 'manual' non lo seguiamo,
+  // e keepalive porta a termine l'invio anche se la pagina si chiude.
   async function post(msg) {
     const res = await fetch(ENDPOINT, {
       method: 'POST', redirect: 'manual', keepalive: true,
@@ -812,22 +1169,22 @@
       store.save(S);
     }
     flushing = false;
-    updateSyncStatus();
+    syncStatus();
     if (S.outbox.length) retryTimer = setTimeout(flush, 20000);
   }
 
-  function updateSyncStatus() {
+  function syncStatus() {
     const el = $('#sync-status');
     if (!el) return;
     const pending = S.outbox.length > 0;
-    el.textContent = pending ? t('thanks.syncing') : t('thanks.synced');
+    el.textContent = pending ? t('q.thanks.syncing') : t('q.thanks.synced');
     el.classList.toggle('ok', !pending);
   }
 
-  function beacon(step) {
+  function beacon(ch) {
     if (!S.consent || !navigator.sendBeacon) return;
     try {
-      const body = JSON.stringify({ type: 'progress', row: { sid: S.sid, step, version: CCF.VERSION, lang }, hp: S.hp || '' });
+      const body = JSON.stringify({ type: 'progress', row: { sid: S.sid, step: ch, version: CCF.VERSION, lang }, hp: S.hp || '' });
       navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'text/plain;charset=utf-8' }));
     } catch (e) { /* il tracciamento dell'avanzamento è accessorio */ }
   }
@@ -841,9 +1198,10 @@
   function researchInputs() {
     const p = S.profile;
     return {
+      ui: UI_VERSION,
       profile: { orgType: p.orgType, sector: p.sector, employees: p.employees, region: p.region, shiftPct: p.shiftPct, pscl: p.pscl, dms: p.dms },
       mns: S.mns, baseline: S.baseline, acc: S.acc, cdr: S.cdr, direct: S.direct, directNotes: S.directNotes,
-      overrides: S.overrides, interventions: S.interventions, monitoring: S.monitoring
+      overrides: S.overrides, skipped: S.skipped, interventions: S.interventions, monitoring: S.monitoring
     };
   }
 
@@ -861,6 +1219,7 @@
       acr: R.acr ? { ACR: round(R.acr.ACR, 4), daysNow: round(R.acr.daysNow, 2), daysNeeded: round(R.acr.daysNeeded, 2) } : null,
       diagnosis: CODES.map(c => { const x = R.diagnosis[c]; return { code: c, value: x.value, derived: x.derived, overridden: x.overridden, reliable: x.reliable, rule: !!x.coherenceRule }; }),
       prevailing: R.prevailing,
+      radar: radarAxes().map(([k, v]) => [k, round(v, 1)]),
       interventions: R.interventions.list.map(x => ({
         id: x.id, selected: x.selected, lever: x.estimate.lever === undefined ? null : x.estimate.lever, estimable: x.estimate.estimable, reason: x.estimate.reason || null,
         dG_t: x.estimate.estimable ? round(x.estimate.dG / 1e6, 3) : null, dGpct: round(x.dGpct, 2),
@@ -919,46 +1278,93 @@
     };
   }
 
-  function submitFeedback() {
-    const f = S.feedback, msg = $('#fb-msg');
-    const show = text => { msg.textContent = text; msg.classList.add('show'); };
-    if (['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'c1', 'c2', 'role', 'experience'].some(k => !f[k])) return show(t('feedback.required'));
-    if (S.contact.ok && !EMAIL_RE.test((S.contact.email || '').trim())) return show(t('feedback.invalidEmail'));
+  function toast(text) {
+    let el = $('#toast');
+    if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 3600);
+  }
+
+  function submit() {
+    const msg = $('#form-msg');
+    const missing = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'c1', 'c2', 'role', 'experience'].find(k => !S.feedback[k]);
+    if (missing) {
+      toast(lang === 'it' ? 'Manca ancora una risposta: ti riporto lì.' : 'One answer is still missing: taking you there.');
+      S.pos = missing;
+      render('back');
+      return;
+    }
+    if (S.contact.ok && !EMAIL_RE.test((S.contact.email || '').trim())) { if (msg) msg.textContent = t('q.final.invalidEmail'); return; }
     queueAssessment();
     enqueue('feedback', feedbackRow());
-    // L'email resta nel browser solo finché il server non conferma l'invio.
+    // l'email resta nel browser solo finché il server non conferma l'invio
     if (S.contact.ok) enqueue('contacts', { lang, email: S.contact.email.trim(), interview_consent: true });
     S.code = S.sid;
     S.contact.email = '';
+    S.pos = 'thanks';
     persist();
-    render();
+    render('fwd');
     printReport();
   }
 
-  function fillPrint() {
-    R = evaluate();
-    $('#print-root').innerHTML = `<div class="report">${reportHTML(true)}</div>`;
+  // ---------- report stampabile ----------
+  function reportHTML() {
+    const x = t('q.results');
+    const r = x.report;
+    const B = R.baseline, D = R.diagnosis, IV = R.interventions;
+    const title = [S.profile.orgName, S.profile.siteName].filter(Boolean).join(' — ') || r.untitled;
+    const date = new Date().toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const rowsN = B.rows.filter(z => z.n > 0);
+    const tile = (lab, val, sub) => `<div class="rep-tile"><div class="rep-l">${esc(lab)}</div><div class="rep-v num">${val}</div><div class="rep-s">${esc(sub || '')}</div></div>`;
+    const bandTxt = v => (v === null ? 'n.d.' : v + ' · ' + t('options.bands')[CCF.band(v) - 1]);
+    const s1 = `<div class="rep-tiles">${tile(r.dmsDeclared, R.dms.declared === null ? '—' : R.dms.declared + '/5')}${tile(r.dmsEffective, R.dms.effective === null ? '—' : R.dms.effective + '/5')}${tile(x.kpi.g[0], fmt(B.tCO2e, 1), x.kpi.g[1])}</div>
+      ${B.complete ? `<table class="rep-table"><thead><tr><th>${esc(r.cols.mode)}</th><th>${esc(r.cols.n)}</th><th>${esc(r.cols.share)}</th><th>${esc(r.cols.paxkm)}</th><th>${esc(r.cols.g)}</th></tr></thead><tbody>
+        ${rowsN.map(z => `<tr><td>${esc(t('options.modes')[z.id])}</td><td>${fmt(z.n)}</td><td>${fmt(z.n / B.N * 100, 1)}%</td><td>${fmt(z.A)}</td><td>${fmt(z.G / 1e6, 1)}</td></tr>`).join('')}
+        </tbody><tfoot><tr><td>${esc(r.total)}</td><td>${fmt(B.N)}</td><td>100%</td><td>${fmt(B.A)}</td><td>${fmt(B.tCO2e, 1)}</td></tr></tfoot></table>` : ''}`;
+    const s2 = `<div class="rep-radar">${radarSVG(false)}</div>
+      <table class="rep-table"><tbody>${CODES.map(c => `<tr><td>${c} · ${esc(t('q.ineff')[c].name)}${D[c].overridden ? ' ✎' : ''}</td><td>${esc(bandTxt(D[c].value))}</td></tr>`).join('')}</tbody></table>
+      <div class="rep-tiles">${tile('MNS', R.mns.valid ? fmt(R.mns.value, 0) + '/100' : '—')}${tile('ACC', R.acc.value === null ? '—' : fmt(R.acc.value, 0) + '/100')}${tile('CDR', R.cdr.value === null ? '—' : fmt(R.cdr.value, 0) + '/100')}</div>`;
+    const acrSub = R.acr ? r.acrText.replace('{p}', fmt(R.acr.ACR * 100, 0)).replace('{d}', fmt(R.acr.daysNow, 1)).replace('{n}', fmt(R.acr.daysNeeded, 1)) : r.acrNa;
+    const s3 = `${B.complete ? `<table class="rep-table"><thead><tr><th>${esc(r.cols.mode)}</th><th>${esc(r.cols.ei)}</th><th>${esc(r.cols.lf)}</th><th>${esc(r.cols.ci)}</th><th>${esc(r.cols.g)}</th></tr></thead><tbody>
+        ${rowsN.map(z => `<tr><td>${esc(t('options.modes')[z.id])}</td><td>${fmt(z.EI, 3)}</td><td>${fmt(z.LF * 100, 0)}%</td><td>${fmt(z.CI, 0)}</td><td>${fmt(z.G / 1e6, 1)}</td></tr>`).join('')}</tbody></table>` : ''}
+      <div class="rep-tiles">${tile(x.kpi.ci[0], fmt(B.CI, 0), x.kpi.ci[1])}${tile(x.kpi.ei[0], fmt(B.EI, 3), x.kpi.ei[1])}${tile(x.kpi.acr[0], R.acr ? fmt(R.acr.ACR * 100, 0) + '%' : '—', acrSub)}</div>
+      ${IV.list.filter(z => z.selected && z.estimate.estimable).length ? `<p class="rep-h">${esc(r.dg)}</p><table class="rep-table"><tbody>${IV.list.filter(z => z.selected && z.estimate.estimable).map(z => `<tr><td>${esc(t('interventions')[z.id])}</td><td>${fmt(z.estimate.dG / 1e6, 1)} t · ${fmt(z.dGpct, 1)}%</td></tr>`).join('')}</tbody></table>` : ''}`;
+    let s4 = IV.dataFirst ? `<p class="rep-d0"><strong>#0 · ${esc(x.d0)}</strong> — ${esc(x.d0note)}</p>` : '';
+    s4 += IV.ranked.length ? `<table class="rep-table"><thead><tr><th>#</th><th>${esc(x.monitorCols.intv)}</th><th>IPI</th><th></th><th>${esc(x.monitorCols.ind)}</th><th>${esc(x.monitorCols.freq)}</th><th>${esc(x.monitorCols.owner)}</th></tr></thead><tbody>
+      ${IV.ranked.map((z, i) => { const m = S.monitoring[z.id] || { freq: 'semiannual', owner: 'mm' }; return `<tr><td>${i + 1}</td><td>${esc(t('interventions')[z.id])}</td><td>${fmt(z.ipi, 1)}</td><td><span class="prio ${z.cls}">${z.cls}</span></td><td>${esc(x.indicators[CCF.MONITORING[z.ineff]])}</td><td>${esc(x.freq[m.freq])}</td><td>${esc(x.owners[m.owner])}</td></tr>`; }).join('')}
+      </tbody></table><p class="rep-note">${esc(x.systemInd)}</p>` : `<p>${esc(IV.observed.length ? x.planEmpty : x.noCandidates)}</p>`;
+    return `<div class="rep"><div class="rep-head"><div class="rep-eyebrow">${esc(r.eyebrow)}</div><div class="rep-title">${esc(title)}</div><div class="rep-date">${esc(r.generated.replace('{date}', date).replace('{v}', CCF.VERSION))}</div></div>
+      <section><h2>${esc(r.s1)}</h2>${s1}</section><section><h2>${esc(r.s2)}</h2>${s2}</section><section><h2>${esc(r.s3)}</h2>${s3}</section><section><h2>${esc(r.s4)}</h2>${s4}</section>
+      <p class="rep-foot">${esc(r.foot)} · ${esc(CONTENT.authors.map(a => a.name).join(', '))}</p></div>`;
   }
 
-  function printReport() {
-    fillPrint();
-    setTimeout(() => window.print(), 60);
-  }
+  function fillPrint() { R = evaluate(); $('#print-root').innerHTML = reportHTML(); }
+  function printReport() { fillPrint(); setTimeout(() => window.print(), 80); }
 
   // ---------- avvio ----------
   document.addEventListener('click', onClick);
-  $('#app').addEventListener('input', onInput);
-  $('#app').addEventListener('change', onChange);
-  $$('.lang button').forEach(btn => btn.addEventListener('click', () => setLang(btn.dataset.lang)));
+  const app = $('#app');
+  app.addEventListener('input', onInput);
+  app.addEventListener('change', onChange);
+  app.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('keydown', onKey);
+  $$('.lang-switch button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  $('#help-fab').addEventListener('click', openHelp);
+  $$('[data-close-help]').forEach(b => b.addEventListener('click', closeHelp));
   document.addEventListener('submit', e => { if (e.target.id === 'request-form') { e.preventDefault(); sendRequest(e.target); } });
   window.addEventListener('beforeprint', fillPrint);
   window.addEventListener('pagehide', () => {
-    S.timings[S.step] = Math.round((S.timings[S.step] || 0) + (Date.now() - enteredAt) / 1000);
+    const sc = current();
+    if (sc) S.timings[sc.ch] = Math.round((S.timings[sc.ch] || 0) + (Date.now() - enteredAt) / 1000);
     enteredAt = Date.now();
     store.save(S);
   });
+  const topbar = $('.topbar');
+  window.addEventListener('scroll', () => topbar.classList.toggle('scrolled', window.scrollY > 4), { passive: true });
 
-  if (S.step > 0 && !S.consent) S.step = 0;
   render();
   flush();
+  if (new URLSearchParams(location.search).has('privacy')) openPrivacy();
 })();
