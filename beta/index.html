@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circular Commuting Framework &amp; Canvas 2.0 beta</title>
+<meta name="description" content="Diagnosi energy-aware della mobilità casa-lavoro e prioritizzazione degli interventi. Versione 2.0 in validazione con i mobility manager.">
+<link rel="preload" href="../assets/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/inter-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="beta.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-row">
+    <a class="backlink" href="../" data-i18n="hero.v1">← Versione 1.0</a>
+    <div class="lang" role="group" aria-label="Lingua / Language">
+      <button type="button" data-lang="it" aria-pressed="true">ITA</button><button type="button" data-lang="en" aria-pressed="false">ENG</button>
+    </div>
+  </div>
+  <div class="wrap hero">
+    <div class="eyebrow"><span class="beta-pill">2.0 beta</span><span data-i18n="hero.eyebrow">nuova versione in validazione</span></div>
+    <h1>Circular Commuting <span class="c">:</span><br>Framework &amp; Canvas 2.0</h1>
+    <p class="sub" data-i18n="hero.sub">Diagnosi energy-aware della mobilità casa-lavoro: dall'inefficienza all'intervento prioritario.</p>
+  </div>
+</header>
+
+<nav class="stepper" id="stepper" aria-label="Canvas"></nav>
+
+<main class="wrap" id="app">
+  <noscript><p class="empty">Per usare il Canvas serve JavaScript. / JavaScript is required to use the Canvas.</p></noscript>
+</main>
+
+<footer>
+  <div><span data-i18n="footer.beta"></span> · <button type="button" class="linkbtn inline" data-action="privacy" data-i18n="footer.privacy">Informativa privacy</button> · <a href="../" data-i18n="footer.v1">Versione 1.0</a></div>
+  <div class="made">made by <a href="https://linktr.ee/corazzini" target="_blank" rel="noopener">Enrico Emanuele Corazzini</a></div>
+</footer>
+
+<dialog id="privacy" aria-labelledby="privacy-title"></dialog>
+<div id="print-root"></div>
+
+<script src="engine.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

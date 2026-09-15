@@ -320,9 +320,37 @@ footer a:hover{color:var(--forest);border-bottom-color:var(--signal)}
   .rep-score,.rep-ineff-item .ri-bar,.rep-ineff-item .ri-bar i,.rep-score .rs-bar i,.prio{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .rep-section{break-inside:avoid}
 }
+
+/* ===== BANNER BETA 2.0 ===== */
+.beta-banner{background:var(--ice);border-bottom:1px solid var(--stone-light);padding:12px 24px}
+.beta-banner-in{display:flex;align-items:center;justify-content:space-between;gap:12px 22px;flex-wrap:wrap}
+.beta-banner p{flex:1;min-width:240px;font-size:14px;line-height:1.45;color:var(--ink-soft)}
+.beta-banner strong{color:var(--ink)}
+.beta-new{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--signal-deep);margin-right:4px}
+.wave-btn{position:relative;isolation:isolate;overflow:hidden;display:inline-block;padding:10px 22px;border-radius:999px;color:#fff;
+  font-family:var(--mono);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;
+  background:linear-gradient(115deg,#073B38 0%,#0F5E5A 22%,#1A5FCF 45%,#1A7B76 68%,#0B7550 85%,#073B38 100%);
+  background-size:320% 100%;animation:ccWave 16s ease-in-out infinite alternate;box-shadow:0 2px 10px rgba(7,59,56,.25)}
+.wave-btn::after{content:"";position:absolute;inset:-40%;z-index:-1;
+  background:radial-gradient(40% 60% at 30% 50%,rgba(46,139,255,.28),transparent 70%),radial-gradient(35% 55% at 72% 50%,rgba(0,178,106,.22),transparent 70%);
+  animation:ccSwell 11s ease-in-out infinite alternate}
+.wave-btn:hover{filter:brightness(1.1)}
+.wave-btn:focus-visible{outline:3px solid var(--signal);outline-offset:3px}
+@keyframes ccWave{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes ccSwell{0%{transform:translate(-12%,4%) scale(1)}100%{transform:translate(12%,-4%) scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.wave-btn,.wave-btn::after{animation:none}}
+@media(max-width:760px){.beta-banner{padding:12px 16px}.wave-btn{width:100%;text-align:center}}
+@media print{.beta-banner{display:none!important}}
 </style>
 </head>
 <body>
+
+<div class="beta-banner" role="region" aria-label="Circular Commuting 2.0 beta">
+  <div class="wrap beta-banner-in">
+    <p><span class="beta-new">NUOVO ·</span> <strong>Circular Commuting 2.0 beta:</strong> stiamo validando il framework con i mobility manager. Analizza la tua sede e ricevi il report.</p>
+    <a class="wave-btn" href="beta/">Prova la beta →</a>
+  </div>
+</div>
 
 <header>
   <div class="wrap">
