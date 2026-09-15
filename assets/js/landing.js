@@ -17,7 +17,7 @@
       betaTitle: 'Aiutaci a validare il framework',
       betaText: "La versione allineata all'articolo di ricerca: domande brevi, una alla volta, e un report completo per la tua sede. Le risposte anonime alimentano la validazione scientifica.",
       beta1: 'Circa 12 minuti', beta2: 'Profilo di criticità e piano di interventi A, B, C', beta3: 'Risposte anonime, a fini di ricerca',
-      betaCta: 'Prova la beta',
+      betaCta: 'Prova la beta', betaNote: 'Gratuita, senza registrazione',
       layersEyebrow: 'Il framework',
       layersTitle: 'Cinque layer, dalla qualità del dato al monitoraggio.',
       layers: [
@@ -30,9 +30,6 @@
       factsEyebrow: 'Dalla letteratura',
       factsTitle: 'Perché misurare la mobilità casa-lavoro.',
       factLabel: 'Lo sapevi?',
-      authorsEyebrow: 'Gli autori',
-      authorsTitle: 'Chi firma la ricerca',
-      paperLine: 'Il framework è descritto nell\'articolo di ricerca «{title}».',
       footPrivacy: 'Informativa privacy della beta',
       helpAria: "Cosa c'è in questa pagina?",
       helpEyebrow: "Cosa c'è a schermo",
@@ -43,6 +40,7 @@
       ],
       helpFw: 'Il Circular Commuting Framework collega cinque layer: dati, inefficienze, prestazioni energetiche, abbinamento degli interventi, governance e monitoraggio. Il Canvas li traduce in otto blocchi operativi.',
       helpFwLabel: 'Nel framework',
+      contactTitle: 'Altri dubbi?', contactText: 'Scrivici: rispondiamo volentieri a domande sul framework e sulla beta.',
       close: 'Chiudi'
     },
     en: {
@@ -59,7 +57,7 @@
       betaTitle: 'Help us validate the framework',
       betaText: 'The version aligned with the research article: short questions, one at a time, and a full report for your site. Anonymous answers feed the scientific validation.',
       beta1: 'About 12 minutes', beta2: 'Criticality profile and A, B, C intervention plan', beta3: 'Anonymous answers, for research',
-      betaCta: 'Try the beta',
+      betaCta: 'Try the beta', betaNote: 'Free, no sign-up',
       layersEyebrow: 'The framework',
       layersTitle: 'Five layers, from data quality to monitoring.',
       layers: [
@@ -72,9 +70,6 @@
       factsEyebrow: 'From the literature',
       factsTitle: 'Why measure employee commuting.',
       factLabel: 'Did you know?',
-      authorsEyebrow: 'The authors',
-      authorsTitle: 'Who is behind the research',
-      paperLine: 'The framework is described in the research article “{title}”.',
       footPrivacy: 'Beta privacy notice',
       helpAria: 'What is on this page?',
       helpEyebrow: 'What you are looking at',
@@ -85,6 +80,7 @@
       ],
       helpFw: 'The Circular Commuting Framework links five layers: data, inefficiency, energy performance, intervention matching, governance and feedback. The Canvas turns them into eight operational blocks.',
       helpFwLabel: 'In the framework',
+      contactTitle: 'Any other questions?', contactText: 'Write to us: we are happy to answer questions about the framework and the beta.',
       close: 'Close'
     }
   };
@@ -105,6 +101,13 @@
     $$('[data-icon]').forEach(el => { if (!el.firstElementChild) el.outerHTML = window.CCF_ICON(el.dataset.icon); });
   }
 
+  function contactHTML(t) {
+    const mail = C.contact.mailUser + '@' + C.contact.mailDomain;
+    return `<div class="help-contact"><strong>${esc(t.contactTitle)}</strong><p>${esc(t.contactText)}</p>
+      <div class="help-links"><a href="mailto:${esc(mail)}">${window.CCF_ICON('mail')}${esc(mail)}</a>
+      <a href="${esc(C.contact.linktree)}" target="_blank" rel="noopener">${window.CCF_ICON('link')}linktr.ee/corazzini</a></div></div>`;
+  }
+
   function render() {
     const t = T[lang];
     document.documentElement.lang = lang;
@@ -123,19 +126,14 @@
 
     $('#facts').innerHTML = ['reporting', 'occupancy', 'parking'].map(k => {
       const f = C.facts[k], x = f[lang];
+      const head = f.icon ? `<div class="fact-big fact-icon">${window.CCF_ICON(f.icon)}</div>`
+        : f.title ? `<div class="fact-title">${esc(f.title[lang])}</div>` : `<div class="fact-big">${esc(f.big)}</div>`;
       return `<article class="fact"><span class="eyebrow">${window.CCF_ICON('bulb')}${esc(t.factLabel)}</span>
-        ${f.icon ? `<div class="fact-big fact-icon">${window.CCF_ICON(f.icon)}</div>` : `<div class="fact-big">${esc(f.big)}</div>`}<p class="fact-text">${esc(x.text)}</p><p class="fact-src">${esc(x.src)}</p></article>`;
+        ${head}<p class="fact-text">${esc(x.text)}</p><p class="fact-src">${esc(x.src)}</p></article>`;
     }).join('');
 
-    $('#paper-line').textContent = t.paperLine.replace('{title}', C.paperTitle);
-    $('#authors').innerHTML = C.authors.map(a => `<article class="card author">
-      <span class="avatar" aria-hidden="true">${esc(a.initials)}</span>
-      <div><h3>${esc(a.name)}</h3></div>
-      <span class="role">${esc(a.role[lang])}</span>
-      <p>${esc(a.bio[lang])}</p></article>`).join('');
-
     $('#help-body').innerHTML = `<h3 id="help-title">${esc(t.helpTitle)}</h3>${t.helpBody.map(p => `<p>${p}</p>`).join('')}
-      <div class="help-fw"><strong>${esc(t.helpFwLabel)}</strong>${esc(t.helpFw)}</div>`;
+      <div class="help-fw"><strong>${esc(t.helpFwLabel)}</strong>${esc(t.helpFw)}</div>${contactHTML(t)}`;
     $$('[data-close-help]').forEach(b => { if (b.classList.contains('help-close')) b.setAttribute('aria-label', t.close); });
   }
 

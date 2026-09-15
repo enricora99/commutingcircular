@@ -33,6 +33,8 @@
     bolt: '<path d="M13 2.5 5.5 13.5H11l-1 8 7.5-11H12z"/>',
     home: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5v10h13v-10"/><path d="M10 19.5v-5h4v5"/>',
     globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.5 2.4 14.5 0 17M12 3.5c-2.4 2.5-2.4 14.5 0 17"/>',
+    mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/>',
+    incognito: '<path d="M4 11.5h16"/><path d="M6.5 11.5l1.8-5.2a1.5 1.5 0 0 1 2-.9l1.7.7 1.7-.7a1.5 1.5 0 0 1 2 .9l1.8 5.2"/><circle cx="8" cy="16.5" r="2.5"/><circle cx="16" cy="16.5" r="2.5"/><path d="M10.5 16.5h3"/>',
 
     // persone e organizzazioni
     person: '<circle cx="12" cy="7.5" r="3.5"/><path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5"/>',

@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Stato di prova della beta</title>
+<!--
+  Solo per l'anteprima locale (la cartella _dev non viene pubblicata):
+  carica uno stato di prova e apre la beta su una schermata, per controlli visivi e screenshot.
+  Esempio: /_dev/seed.html?f=fixtures/state-demo.json&pos=ivSelect&lang=en
+  Il caricamento è sincrono, così anche uno screenshot da Chrome headless vede già la beta.
+-->
+<script>
+  const p = new URLSearchParams(location.search);
+  const x = new XMLHttpRequest();
+  x.open('GET', p.get('f') || 'fixtures/state-demo.json', false);
+  x.send();
+  const st = JSON.parse(x.responseText);
+  if (p.get('pos')) st.pos = p.get('pos');
+  if (p.get('lang')) st.lang = p.get('lang');
+  localStorage.setItem('ccf-beta-2', JSON.stringify(st));
+  location.replace('/beta/?test=1' + (p.get('lang') ? '&lang=' + p.get('lang') : ''));
+</script>

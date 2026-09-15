@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Circular Commuting Framework — dalla diagnosi alla decisione</title>
 <meta name="description" content="Un framework per diagnosticare le inefficienze della mobilità casa-lavoro, misurarle in energia ed emissioni per passeggero-km e ordinare gli interventi che le correggono.">
-<link rel="preload" href="assets/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="theme-color" content="#1B2E2A">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/manrope-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/css/ccf.css">
 <link rel="stylesheet" href="assets/css/landing.css">
 </head>
@@ -14,7 +18,7 @@
 <header class="topbar" id="topbar">
   <div class="container row">
     <a class="brand" href="./">
-      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M22.6 10.2A9.5 9.5 0 1 0 23.2 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M23.6 5.8v4.6H19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="14" r="2.8" fill="#586CC9"/></svg>
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M22.6 10.2A9.5 9.5 0 1 0 23.2 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M23.6 5.8v4.6H19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="14" r="2.8" fill="#3C8A78"/></svg>
       Circular Commuting
     </a>
     <div class="actions">
@@ -52,7 +56,7 @@
             <li><span data-icon="report"></span><span data-i18n="lite3">Sintesi stampabile</span></li>
           </ul>
           <div class="panel-cta">
-            <a class="btn btn-primary btn-lg" href="semplificato/" data-href-lang="semplificato/"><span data-i18n="liteCta">Apri la versione semplificata</span><span data-icon="arrowRight"></span></a>
+            <a class="btn btn-ghost btn-lg" href="semplificato/" data-href-lang="semplificato/"><span data-i18n="liteCta">Apri la versione semplificata</span><span data-icon="arrowRight"></span></a>
             <span class="panel-note" data-i18n="liteNote" hidden></span>
           </div>
         </article>
@@ -68,7 +72,8 @@
             <li><span data-icon="shield"></span><span data-i18n="beta3">Risposte anonime, a fini di ricerca</span></li>
           </ul>
           <div class="panel-cta">
-            <a class="btn btn-light btn-lg" href="beta/" data-href-lang="beta/"><span data-i18n="betaCta">Prova la beta</span><span data-icon="arrowRight"></span></a>
+            <a class="btn btn-cta" href="beta/" data-href-lang="beta/"><span data-i18n="betaCta">Prova la beta</span><span data-icon="arrowRight"></span></a>
+            <span class="cta-note" data-i18n="betaNote">Gratuita, senza registrazione</span>
           </div>
         </article>
       </div>
@@ -89,15 +94,6 @@
       <h2 data-i18n="factsTitle">Perché misurare la mobilità casa-lavoro.</h2>
     </div>
     <div class="facts" id="facts"></div>
-  </section>
-
-  <section class="section container" id="autori">
-    <div class="section-head">
-      <span class="eyebrow" data-i18n="authorsEyebrow">Gli autori</span>
-      <h2 data-i18n="authorsTitle">Chi firma la ricerca</h2>
-      <p class="lede" id="paper-line"></p>
-    </div>
-    <div class="authors" id="authors"></div>
   </section>
 </main>
 

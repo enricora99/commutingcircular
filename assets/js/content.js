@@ -1,9 +1,17 @@
 /*
- * Contenuti condivisi tra home e beta: autori e curiosità dalla letteratura citata nell'articolo.
+ * Contenuti condivisi tra home e beta: contatti, autori e curiosità dalla letteratura citata nell'articolo.
+ * Gli autori compaiono solo nella beta (alla fine e nel pannello "?"), non nella home.
  * Le curiosità sono parafrasi dei risultati, con la fonte: niente citazioni testuali.
  */
 window.CCF_CONTENT = {
   paperTitle: 'An Energy-Aware Circular Commuting Framework for Corporate Mobility Management',
+
+  // L'indirizzo si compone nel browser: non compare intero nel codice della pagina.
+  contact: {
+    name: 'Enrico Emanuele Corazzini',
+    mailUser: 'enricora99', mailDomain: 'gmail.com',
+    linktree: 'https://linktr.ee/corazzini'
+  },
 
   authors: [
     {
@@ -76,7 +84,7 @@ window.CCF_CONTENT = {
       en: { text: 'The morning commute ranks among the least pleasant moments of the day, and longer commutes are not offset by higher pay or cheaper housing.', src: 'Kahneman & Krueger (2006); Stutzer & Frey (2008)' }
     },
     package: {
-      big: '1 + 1 > 2',
+      title: { it: 'Le misure funzionano meglio in pacchetto', en: 'Measures work better as a package' },
       it: { text: "L'efficacia di un piano di mobilità aziendale dipende più dalla coerenza del pacchetto di misure che dalla singola misura.", src: 'Cairns et al. (2010); Petrunoff et al. (2016)' },
       en: { text: 'The effectiveness of a workplace travel plan depends more on how coherent the package is than on any single measure.', src: 'Cairns et al. (2010); Petrunoff et al. (2016)' }
     },

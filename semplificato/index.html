@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Circular Commuting Canvas — versione semplificata</title>
+<meta name="theme-color" content="#1B2E2A">
+<link rel="icon" href="../favicon.ico" sizes="48x48">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="stylesheet" href="../assets/css/ccf.css">
 <style>
-@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(../assets/fonts/inter-var-latin.woff2) format('woff2')}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:200 800;font-display:swap;src:url(../assets/fonts/manrope-var-latin.woff2) format('woff2')}
 @font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(../assets/fonts/jetbrains-mono-400.woff2) format('woff2')}
 @font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url(../assets/fonts/jetbrains-mono-700.woff2) format('woff2')}
 :root{
@@ -14,7 +18,7 @@
   --stone:#7E948E;--stone-light:#C2D0CB;--signal:#00B26A;--signal-deep:#0E8C57;
   --mint:#6EE7B7;--forest:#0F5E5A;--forest-deep:#073B38;--forest-soft:#1A7B76;
   --lime:#C8FF6B;--sky:#2E8BFF;--sky-deep:#1A5FCF;--sky-soft:#BBE0FF;--ice:#E5F2EE;--coral:#FF7A59;
-  --font:'Inter','Helvetica Neue',Arial,sans-serif;
+  --font:'Manrope','Helvetica Neue',Arial,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -342,14 +346,13 @@ footer a:hover{color:var(--forest);border-bottom-color:var(--signal)}
 
 /* ===== RESTYLING 2026: design system condiviso (assets/css/ccf.css), contenuti e calcoli invariati ===== */
 :root{
-  --paper:#FAFAFA;--paper-deep:#ECEFF2;--ink:#1D2130;--ink-soft:#383F5D;
-  --stone:#6B7280;--stone-light:#DDE2EA;--signal:#586CC9;--signal-deep:#3F51A8;
-  --mint:#D6E6FF;--forest:#383F5D;--forest-deep:#1D2130;--forest-soft:#586CC9;
-  --lime:#D6E6FF;--sky:#586CC9;--sky-deep:#3F51A8;--sky-soft:#D6E6FF;--ice:#EEF4FF;--coral:#E8604C;
-  --font:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --paper:#F7F6F1;--paper-deep:#E7EBE6;--ink:#1B2E2A;--ink-soft:#41534E;
+  --stone:#6E7C78;--stone-light:#D3DCD6;--signal:#3C8A78;--signal-deep:#2A6A5B;
+  --mint:#D3EADF;--forest:#41534E;--forest-deep:#1B2E2A;--forest-soft:#3C8A78;
+  --lime:#D3EADF;--sky:#3F7196;--sky-deep:#2A6A5B;--sky-soft:#E1EDF6;--ice:#ECF5F0;--coral:#D0625A;
+  --font:'Manrope',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
 }
-body{font-feature-settings:"ss01","cv11"}
-header{border-bottom:3px solid var(--signal)}
+header{border-bottom:3px solid var(--signal);background-color:var(--ink);background-image:var(--marks-light);background-size:132px 132px}
 header h1,h2.sec{font-weight:300;letter-spacing:-.022em}
 header h1{color:var(--paper)}
 header h1 .c{color:var(--mint)}
@@ -368,8 +371,8 @@ nav{border-bottom:1px solid var(--stone-light);box-shadow:none}
 .qcard select,.field input,.field select,.field textarea,.scorerow select{border-width:1px;background:#fff}
 .beta-banner{background:var(--ice);border-bottom:1px solid var(--stone-light)}
 .beta-new{font-family:var(--font);color:var(--signal-deep)}
-.wave-btn{font-family:var(--font);background:linear-gradient(115deg,#1D2130 0%,#383F5D 22%,#3F51A8 45%,#0F766E 70%,#586CC9 86%,#1D2130 100%);background-size:320% 100%}
-.wave-btn::after{background:radial-gradient(40% 60% at 30% 50%,rgba(214,230,255,.22),transparent 70%),radial-gradient(35% 55% at 72% 50%,rgba(20,184,166,.18),transparent 70%)}
+.wave-btn{font-family:var(--font);background:linear-gradient(115deg,#1B2E2A 0%,#2A6A5B 24%,#3F7196 46%,#6A5CA6 68%,#2A6A5B 86%,#1B2E2A 100%);background-size:320% 100%}
+.wave-btn::after{background:radial-gradient(40% 60% at 30% 50%,rgba(191,230,212,.24),transparent 70%),radial-gradient(35% 55% at 72% 50%,rgba(246,204,178,.2),transparent 70%)}
 .help-eyebrow{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--signal)}
 @media print{.help-fab,.help-drawer{display:none!important}}
 </style>
@@ -1182,12 +1185,19 @@ renderIPI();
     leg: ['La legenda', "Scale, fasce di lettura e fattori energetici ed emissivi usati dallo strumento."]
   };
   var drawer = document.getElementById('help-drawer'), body = document.getElementById('help-body'), last = null;
+  // l'indirizzo si compone nel browser, come nella home e nella beta
+  function contact() {
+    var mail = ['enricora99', 'gmail.com'].join('@');
+    return '<div class="help-contact"><strong>Altri dubbi?</strong><p>Scrivici: rispondiamo volentieri a domande sul Canvas e sulla beta.</p>' +
+      '<div class="help-links"><a href="mailto:' + mail + '">' + mail + '</a><a href="https://linktr.ee/corazzini" target="_blank" rel="noopener">linktr.ee/corazzini</a></div></div>';
+  }
   function current() { var t = document.querySelector('.tab.active'); return t ? t.getAttribute('data-view') : 'ccf'; }
   function open() {
     var h = HELP[current()] || HELP.ccf;
     body.innerHTML = '<h3 id="help-title">' + h[0] + '</h3><p>' + h[1] + '</p>' +
       "<p>È la versione semplificata del Circular Commuting Canvas, nata con la tesi. Nessun dato lascia il tuo browser: se ricarichi la pagina, i campi si azzerano.</p>" +
-      "<div class=\"help-fw\"><strong>La beta 2.0</strong>Segue l'articolo di ricerca: calcola energia ed emissioni per mezzo con le equazioni del paper, propone solo interventi coerenti con le inefficienze emerse e raccoglie in forma anonima le valutazioni dei mobility manager. <a href=\"../beta/\">Prova la beta</a></div>";
+      "<div class=\"help-fw\"><strong>La beta 2.0</strong>Segue l'articolo di ricerca: calcola energia ed emissioni per mezzo con le equazioni del paper, propone solo interventi coerenti con le inefficienze emerse e raccoglie in forma anonima le valutazioni dei mobility manager. <a href=\"../beta/\">Prova la beta</a></div>" +
+      contact();
     last = document.activeElement;
     drawer.classList.add('open');
     setTimeout(function () { drawer.querySelector('.help-close').focus(); }, 60);

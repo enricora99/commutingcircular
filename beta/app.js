@@ -10,7 +10,7 @@
 
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwko-WdJPu1TeI5oevLKS0PgMGf6oMQNX6nbP4Vu_gwgJ-8NFQiGi8eakfWbHAekQc/exec';
   const STORE_KEY = 'ccf-beta-2';
-  const UI_VERSION = '2.1';
+  const UI_VERSION = '2.2';
   const I18N = window.CCF_I18N;
   const CONTENT = window.CCF_CONTENT;
   const ICON = window.CCF_ICON;
@@ -27,9 +27,16 @@
   ];
   const CHAPTER_FACT = { 1: 'reporting', 2: 'remote', 3: 'occupancy', 4: 'bike', 5: 'parking', 6: 'wellbeing', 7: 'package', 9: 'optimal' };
   const MODE_ICON = { car_solo: 'carSolo', car_pool: 'carPool', car_ev: 'carEv', moto: 'moto', shuttle: 'shuttle', bus: 'bus', bus_el: 'busEv', train: 'train', ebike: 'ebike', active: 'bike' };
-  const MODE_COLOR = { car_solo: '#1D2130', car_pool: '#383F5D', car_ev: '#586CC9', moto: '#6B7280', shuttle: '#3F51A8', bus: '#7C8FDB', bus_el: '#9DB0E8', train: '#B9C8F2', ebike: '#14B8A6', active: '#5EEAD4' };
+  const MODE_COLOR = { car_solo: '#1B2E2A', car_pool: '#41534E', car_ev: '#6E7C78', moto: '#9AA7A2', shuttle: '#6A5CA6', bus: '#3F7196', bus_el: '#8DB8D6', train: '#B3A7D9', ebike: '#3C8A78', active: '#8CC7AE' };
+  const SEV_COLOR = ['#6DB38F', '#B5CB6E', '#E6C15C', '#E8945F', '#D0625A'];
   const GCS_ICON = ['person', 'users', 'truck', 'columns', 'network'];
   const INEFF_ICON = { I1: 'i1', I2: 'i2', I3: 'i3', I4: 'i4', I5: 'i5' };
+  const IV_ICON = {
+    i1_lf: 'bus', i1_carpool: 'carPool', i1_rightsize: 'shuttle', i1_ptdeal: 'train', i2_coord: 'network', i2_convert: 'route', i2_coalition: 'users',
+    i3_align: 'clock', i3_ondemand: 'pin', i3_stagger: 'frequency', i4_equip: 'lockers', i4_route: 'lane', i4_feeder: 'busStop', i4_micro: 'ebike',
+    i5_remote: 'laptop', i5_cowork: 'building', i5_redistribute: 'calendar'
+  };
+  const PRESELECT = 3;   // interventi principali proposti già selezionati: la valutazione resta breve
   const CI_REF = CCF.MODES[0].e / CCF.MODES[0].o * CCF.PHI.fossil;   // auto termica con una sola persona
   const RADAR_SHORT = { I1: 'I1', I2: 'I2', I3: 'I3', I4: 'I4', I5: 'I5', CI: 'CI', DATA: 'DMS', GOV: 'GCS' };
 
@@ -135,7 +142,29 @@
     };
   }
 
-  function evaluate() { return CCF.evaluate(engineState()); }
+  // Il motore seleziona di default tutti gli interventi principali. Per non allungare la compilazione l'interfaccia ne
+  // preseleziona al massimo PRESELECT, dalle inefficienze più gravi; le scelte esplicite di chi compila restano valide.
+  function evaluate() {
+    const st = engineState();
+    const first = CCF.evaluate(st);
+    const defaults = defaultSelection(first);
+    let changed = false;
+    first.interventions.list.forEach(x => {
+      const own = S.interventions[x.id] && S.interventions[x.id].selected;
+      if (own === undefined && defaults[x.id] !== x.selected) {
+        st.interventions[x.id] = Object.assign({}, st.interventions[x.id], { selected: defaults[x.id] });
+        changed = true;
+      }
+    });
+    return changed ? CCF.evaluate(st) : first;
+  }
+
+  function defaultSelection(r) {
+    const out = {};
+    let n = 0;
+    orderedCandidates(r).forEach(x => { const on = x.role === 'primary' && n < PRESELECT; if (on) n += 1; out[x.id] = on; });
+    return out;
+  }
 
   // ---------- utilità ----------
   function t(path, vars) {
@@ -179,7 +208,7 @@
       options: entries(o.sector).map(([v, [ic, l]]) => ({ value: v, icon: ic, label: l })) });
     add({ id: 'employees', ch: 1, kind: 'number', path: 'profile.employees', help: 'employees', title: q.employees.title, sub: q.employees.sub,
       unit: t('ui.people'), chips: [50, 100, 250, 500, 1000], min: 1, max: 100000, answered: () => CCF.num(S.profile.employees) >= 1 });
-    add({ id: 'region', ch: 1, kind: 'region', path: 'profile.region', auto: true, help: 'sample', title: q.region.title });
+    add({ id: 'region', ch: 1, kind: 'region', path: 'profile.region', auto: true, help: 'region', title: q.region.title, sub: q.region.sub });
     add({ id: 'shifts', ch: 1, kind: 'percent', path: 'profile.shiftPct', help: 'shifts', title: q.shifts.title, sub: q.shifts.sub, chips: [0, 10, 25, 50, 75, 100] });
     add({ id: 'pscl', ch: 1, kind: 'choice', path: 'profile.pscl', layout: 'grid-3', auto: true, help: 'pscl', title: q.pscl.title, sub: q.pscl.sub,
       options: entries(o.pscl).map(([v, [ic, l]]) => ({ value: v, icon: ic, label: l })) });
@@ -219,8 +248,13 @@
     // Capitolo 7 · cosa fare
     add({ id: 'ch7', ch: 7, kind: 'chapter' });
     add({ id: 'ivSelect', ch: 7, kind: 'ivSelect', help: 'ivSelect', answered: () => true });
+    // una domanda per schermata: costo, accoglienza e dati; l'impatto solo quando il framework non riesce a stimarlo
     const chosen = orderedCandidates().filter(x => x.selected);
-    chosen.forEach((x, i) => add({ id: 'iv:' + x.id, ch: 7, kind: 'iv', ivId: x.id, k: i + 1, n: chosen.length, help: 'iv', answered: () => { const y = ivResult(x.id); return !!(y && y.ipi !== null); } }));
+    chosen.forEach((x, i) => {
+      const dims = ivDims(x);
+      dims.forEach((dim, j) => add({ id: `iv:${x.id}:${dim}`, ch: 7, kind: 'ivq', ivId: x.id, dim, k: i + 1, n: chosen.length, j: j + 1, m: dims.length,
+        auto: true, help: 'iv', answered: () => has((S.interventions[x.id] || {})[dim]) }));
+    });
 
     // Capitolo 8 · risultati
     add({ id: 'results', ch: 8, kind: 'results', help: 'results', answered: () => true });
@@ -230,10 +264,15 @@
     ['f1', 'f2', 'f3', 'f4', 'f5', 'f6'].forEach(f => add({ id: f, ch: 9, kind: 'truth', path: 'feedback.' + f, auto: true, help: 'truth', title: q.truth.items[f] }));
     add({ id: 'c1', ch: 9, kind: 'yesno', path: 'feedback.c1', textPath: 'feedback.c1text', help: 'c1', title: q.c1.title, textLabel: q.c1.text });
     add({ id: 'c2', ch: 9, kind: 'yesno', path: 'feedback.c2', textPath: 'feedback.c2text', help: 'c2', title: q.c2.title, textLabel: q.c2.text });
-    add({ id: 'role', ch: 9, kind: 'choice', path: 'feedback.role', layout: 'grid-4', auto: true, help: 'profile', title: q.role.title,
-      options: entries(q.role.options).map(([v, l]) => ({ value: v, icon: o.roleIcons[v], label: l })) });
-    add({ id: 'experience', ch: 9, kind: 'choice', path: 'feedback.experience', layout: 'grid-4', auto: true, help: 'profile', title: q.experience.title,
-      options: entries(q.experience.options).map(([v, l], i) => ({ value: v, scale: i + 1, label: l })) });
+    // prima di chiedere il profilo professionale, chi compila sceglie se restare del tutto anonimo
+    add({ id: 'share', ch: 9, kind: 'choice', path: 'feedback.share', layout: 'grid-2 share', auto: true, help: 'share', title: q.share.title, sub: q.share.sub,
+      options: [{ value: 'yes', icon: 'person', label: q.share.yes, sub: q.share.yesSub }, { value: 'no', icon: 'incognito', label: q.share.no, sub: q.share.noSub }] });
+    if (S.feedback.share === 'yes') {
+      add({ id: 'role', ch: 9, kind: 'choice', path: 'feedback.role', layout: 'grid-4', auto: true, help: 'profile', title: q.role.title,
+        options: entries(q.role.options).map(([v, l]) => ({ value: v, icon: o.roleIcons[v], label: l })) });
+      add({ id: 'experience', ch: 9, kind: 'choice', path: 'feedback.experience', layout: 'grid-4', auto: true, help: 'profile', title: q.experience.title,
+        options: entries(q.experience.options).map(([v, l], i) => ({ value: v, scale: i + 1, label: l })) });
+    }
     add({ id: 'final', ch: 9, kind: 'final', help: 'final', answered: () => true });
     add({ id: 'thanks', ch: 10, kind: 'thanks', help: 'thanks', answered: () => true });
     return list;
@@ -253,14 +292,17 @@
     return R.diagnosis[code].value !== null;
   }
 
-  function orderedCandidates() {
-    const iv = R.interventions;
-    const order = iv.observed.slice().sort((a, b) => R.diagnosis[b].value - R.diagnosis[a].value);
+  function orderedCandidates(r) {
+    r = r || R;
+    const iv = r.interventions;
+    const order = iv.observed.slice().sort((a, b) => r.diagnosis[b].value - r.diagnosis[a].value);
     const out = [];
     order.forEach(code => iv.list.filter(x => x.ineff === code).sort((a, b) => (a.role === b.role ? 0 : a.role === 'primary' ? -1 : 1)).forEach(x => out.push(x)));
     return out;
   }
   const ivResult = id => R.interventions.list.find(x => x.id === id);
+  const ivDims = x => (x.impactProposed === null ? ['impact', 'cost', 'acc', 'data'] : ['cost', 'acc', 'data']);
+  const ivName = id => t('ivPlain')[id].name;
 
   function chapterCount(list, ch) { return list.filter(s => s.ch === ch && s.kind !== 'chapter').length; }
 
@@ -291,8 +333,22 @@
     const f = CONTENT.facts[key];
     if (!f) return '';
     const x = f[lang];
+    const top = f.icon ? `<div class="fact-big fact-icon">${ICON(f.icon)}</div>`
+      : f.title ? `<div class="fact-title">${esc(f.title[lang])}</div>` : `<div class="fact-big">${esc(f.big)}</div>`;
     return `<article class="fact"><span class="eyebrow">${ICON('bulb')}${esc(t('ui.factLabel'))}</span>
-      ${f.icon ? `<div class="fact-big fact-icon">${ICON(f.icon)}</div>` : `<div class="fact-big">${esc(f.big)}</div>`}<p class="fact-text">${esc(x.text)}</p><p class="fact-src">${esc(x.src)}</p></article>`;
+      ${top}<p class="fact-text">${esc(x.text)}</p><p class="fact-src">${esc(x.src)}</p></article>`;
+  }
+
+  // mappa delle regioni: tracciati generati da _dev/build-italy-map.js (ISTAT, openpolis, CC BY 4.0)
+  function italyMap(cur) {
+    const M = window.CCF_ITALY;
+    if (!M) return '';
+    const x = t('q.region');
+    const paths = M.regions.map(r => `<path class="reg${cur === r.name ? ' on' : ''}" d="${r.d}" data-choose="profile.region" data-value="${esc(r.name)}" data-name="${esc(r.name)}"
+      role="button" tabindex="0" aria-label="${esc(r.name)}" aria-pressed="${cur === r.name}"></path>`).join('');
+    const label = cur && cur !== 'abroad' ? cur : x.mapHint;
+    return `<figure class="map-card card"><svg class="italy" viewBox="0 0 ${M.w} ${M.h}" role="group" aria-label="${esc(x.mapAria)}">${paths}</svg>
+      <figcaption><span class="map-label" id="map-label" data-default="${esc(label)}">${esc(label)}</span><span class="map-src">${esc(x.attribution)}</span></figcaption></figure>`;
   }
 
   function authorsGrid() {
@@ -320,7 +376,6 @@
         <section class="card research">
           <span class="eyebrow">${esc(x.researchTitle)}</span>
           ${x.research.map((p, i) => `<p${i === 0 ? ' class="research-lead"' : ''}>${esc(p.replace('{title}', CONTENT.paperTitle))}</p>`).join('')}
-          <h3 class="authors-title">${esc(x.authorsTitle)}</h3>${authorsGrid()}
         </section>
         <div class="card consent">
           <label class="check"><input type="checkbox" data-bind="consent"${S.consent ? ' checked' : ''}><span>${esc(x.consent)}</span></label>
@@ -369,8 +424,9 @@
         i += 1;
         return `<button type="button" class="chip${cur === n ? ' on' : ''}" data-choose="profile.region" data-value="${esc(n)}" aria-pressed="${cur === n}">${esc(n)}</button>`;
       }).join('')}</div></div>`;
-      return head(sc) + `<div class="regions">${REGIONS.map((names, k) => group(names, g[k])).join('')}
-        <div class="region-group"><div class="region-chips"><button type="button" class="chip${cur === 'abroad' ? ' on' : ''}" data-choose="profile.region" data-value="abroad" aria-pressed="${cur === 'abroad'}">${esc(t('q.region.abroad'))}</button></div></div></div>`;
+      return head(sc) + `<div class="region-layout">${italyMap(cur)}
+        <div class="regions"><div class="region-list-title">${esc(t('q.region.listTitle'))}</div>${REGIONS.map((names, k) => group(names, g[k])).join('')}
+        <div class="region-group"><div class="region-chips"><button type="button" class="chip${cur === 'abroad' ? ' on' : ''}" data-choose="profile.region" data-value="abroad" aria-pressed="${cur === 'abroad'}">${esc(t('q.region.abroad'))}</button></div></div></div></div>`;
     },
 
     percent(sc) {
@@ -477,45 +533,68 @@
       const reason = overridden ? `<label class="reason"><span>${esc(x.reason)}</span><textarea rows="2" data-bind="overrides.${code}.note">${esc(S.overrides[code].note || '')}</textarea></label>` : '';
       const dk = direct || derivedBand === null
         ? `<div class="dontknow-row"><button type="button" class="chip${S.skipped[code] ? ' on' : ''}" data-act="ineffSkip" data-code="${code}" data-dontknow>${esc(x.dontKnow)} <kbd>0</kbd></button></div>` : '';
-      return head(Object.assign({}, sc, { eyebrow: `${code} · ${x[code].name}`, icon: INEFF_ICON[code] }), `<p class="q-note">${ICON(direct ? 'search' : 'radar')}<span>${esc(note)}</span></p>`)
+      return head(Object.assign({}, sc, { eyebrow: `${t('chapters')[6]} · ${CODES.indexOf(code) + 1}/5`, icon: INEFF_ICON[code] }), `<p class="q-note">${ICON(direct ? 'search' : 'radar')}<span>${esc(note)}</span></p>`)
         + `<div class="opts col-5" role="group">${options.map((o, i) => optButton('ineff.' + code, o, i, cur)).join('')}</div>${reason}${dk}`;
     },
 
+    // Le proposte, raggruppate per problema, in parole semplici e con il beneficio stimato. Si attivano con un tocco.
     ivSelect() {
       const x = t('q.ivSelect');
       const cands = orderedCandidates();
       if (!cands.length) return head({ title: x.none });
-      const title = cands.length === 1 ? x.titleOne : x.title.replace('{n}', cands.length);
+      const title = cands.length === 1 ? x.titleOne : x.title;
       const warn = R.interventions.dataFirst ? `<div class="note warn">${ICON('database')}<span>${esc(x.dataFirst)}</span></div>` : '';
-      return head({ title, sub: x.sub }) + warn + `<div class="iv-list">${cands.map(c => `<button type="button" class="iv-pick" data-toggle-iv="${c.id}" aria-pressed="${c.selected}">
-          <span class="iv-pick-check">${ICON('check')}</span>
-          <span class="iv-pick-body"><span class="iv-pick-name">${esc(t('interventions')[c.id])}</span>
-          <span class="iv-pick-meta"><span class="pill ${c.role}">${esc(x[c.role])}</span>${esc(x.treats.replace('{name}', t('q.ineff')[c.ineff].name))}</span></span>
-          ${ICON(INEFF_ICON[c.ineff], 'iv-pick-ico')}</button>`).join('')}</div>`;
+      const groups = [];
+      cands.forEach(c => {
+        let g = groups.find(z => z.code === c.ineff);
+        if (!g) { g = { code: c.ineff, items: [] }; groups.push(g); }
+        g.items.push(c);
+      });
+      const card = c => {
+        const P = t('ivPlain')[c.id];
+        return `<button type="button" class="iv-card" data-toggle-iv="${c.id}" aria-pressed="${c.selected}">
+          <span class="iv-card-top"><span class="iv-card-ico">${ICON(IV_ICON[c.id])}</span>${c.role === 'primary' ? `<span class="pill primary">${esc(x.recommended)}</span>` : ''}<span class="iv-card-check">${ICON('check')}</span></span>
+          <span class="iv-card-name">${esc(P.name)}</span><span class="iv-card-what">${esc(P.what)}</span>
+          <span class="iv-card-benefit">${ICON('leaf')}<span>${esc(benefitText(c))}</span></span></button>`;
+      };
+      // le idee complementari restano raccolte sotto le consigliate, così la schermata non chiede troppa attenzione
+      const more = g => {
+        const extra = g.items.filter(c => c.role !== 'primary');
+        if (!extra.length) return '';
+        const label = extra.length === 1 ? x.moreIdeasOne : x.moreIdeas.replace('{n}', extra.length);
+        return `<details class="iv-more"${extra.some(c => c.selected) ? ' open' : ''}><summary>${esc(label)}</summary><div class="iv-cards">${extra.map(card).join('')}</div></details>`;
+      };
+      const sections = groups.map(g => {
+        const d = R.diagnosis[g.code];
+        return `<section class="iv-group"><header class="iv-group-head">${ICON(INEFF_ICON[g.code])}<span>${esc(x.forProblem.replace('{problem}', t('q.ineff')[g.code].problem))}</span>
+          ${d.value !== null ? `<span class="sev b${d.band}">${esc(x.level.replace('{band}', t('options.bands')[d.band - 1]))}</span>` : ''}</header>
+          <div class="iv-cards">${g.items.filter(c => c.role === 'primary').map(card).join('')}</div>${more(g)}</section>`;
+      }).join('');
+      return head({ eyebrow: x.eyebrow, title, sub: x.sub }) + warn + `<div class="iv-summary" id="iv-summary" role="status"></div>${sections}`;
     },
 
-    iv(sc) {
+    // Una domanda per schermata su ciascuna proposta scelta; le stime del framework restano consultabili e correggibili.
+    ivq(sc) {
       const x = t('q.iv');
       const r = ivResult(sc.ivId);
       if (!r) return '';
+      const P = t('ivPlain')[sc.ivId];
       const u = S.interventions[sc.ivId] || {};
-      const lever = r.scenario ? `<label class="lever"><span id="iv-lever-label"></span>
-          <input type="range" class="range" min="0" max="100" step="1" value="${CCF.num(u.leverPct) !== null ? u.leverPct : Math.round(r.scenario.lever * 100)}" data-bind="interventions.${sc.ivId}.leverPct"></label>` : '';
-      const row = (dim, label, opts, glyph) => `<div class="qrow"><div class="qrow-label">${esc(label)}</div>
-          <div class="chips5" role="group">${opts.map((l, i) => `<button type="button" class="c5" data-ivset="${sc.ivId}" data-dim="${dim}" data-value="${i + 1}" aria-pressed="false">
-            ${glyph === 'gcs' ? ICON(GCS_ICON[i]) : SCALE(i + 1)}<span>${esc(l)}</span></button>`).join('')}</div>
-          <div class="qrow-note" id="note-${dim}"></div></div>`;
-      return head({ eyebrow: x.eyebrow.replace('{k}', sc.k).replace('{n}', sc.n).replace('{name}', t('q.ineff')[r.ineff].name), title: t('interventions')[sc.ivId] })
-        + `<div class="iv-grid">
-          <div class="card iv-estimate"><span class="eyebrow">${ICON('leaf')}${esc(x.reduction)}</span>
-            <div class="iv-dg num" id="iv-dg">—</div><div class="iv-unit" id="iv-unit">${esc(x.unit)}</div><div class="iv-pct" id="iv-pct"></div>${lever}
-          </div>
-          <div class="iv-questions">
-            ${row('cost', x.qCost, x.cost)}${row('acc', x.qAcc, x.acc)}${row('data', x.qData, x.data)}
-            <details class="more" id="more-gcs"><summary><span>${esc(x.qGcs)}</span><strong id="sum-gcs"></strong></summary>${row('gcs', x.qGcs, x.gcs, 'gcs')}</details>
-            <details class="more" id="more-impact"${r.impactProposed === null ? ' open' : ''}><summary><span>${esc(x.qImpact)}</span><strong id="sum-impact"></strong></summary>${row('impact', x.qImpact, x.impact)}</details>
-          </div></div>
-        <div class="iv-result" id="iv-result"></div>`;
+      const first = sc.j === 1;
+      const capped = sc.dim === 'data' && r.dataCap;
+      const cur = capped && Number(u.data) > 2 ? '2' : u[sc.dim];
+      const options = x[sc.dim].map((label, i) => ({ value: String(i + 1), label, sub: x[sc.dim + 'Sub'][i], scale: i + 1 }));
+      const opts = options.map((o, i) => optButton(`interventions.${sc.ivId}.${sc.dim}`, o, i, cur, capped && i >= 2 ? 'disabled' : '')).join('');
+      const card = `<div class="iv-head card${first ? ' first' : ''}">
+          <span class="iv-head-ico">${ICON(IV_ICON[sc.ivId])}</span>
+          <div class="iv-head-body"><span class="eyebrow">${esc(x.eyebrow.replace('{k}', sc.k).replace('{n}', sc.n))}</span>
+            <strong class="iv-head-name">${esc(P.name)}</strong>
+            ${first ? `<p class="iv-head-what">${esc(P.what)}</p><p class="iv-head-why">${ICON('search')}<span>${esc(x.why.replace('{problem}', t('q.ineff')[r.ineff].problem))}</span></p>` : ''}</div>
+          <div class="iv-head-benefit"><span class="iv-dg num" id="iv-dg">—</span><span class="iv-unit" id="iv-unit"></span></div></div>`;
+      const note = capped ? `<p class="q-note">${ICON('database')}<span>${esc(x.capped)}</span></p>` : '';
+      const steps = `<span class="ivq-steps" aria-label="${esc(x.step.replace('{j}', sc.j).replace('{m}', sc.m))}">${Array.from({ length: sc.m }, (_, i) => `<i class="${i < sc.j ? 'on' : ''}"></i>`).join('')}</span>`;
+      return card + `<header class="q-head">${steps}<h1 class="q-title" tabindex="-1">${esc(x.q[sc.dim])}</h1><p class="q-sub">${esc(x.qsub[sc.dim])}</p>${note}</header>
+        <div class="opts row-5 ivq-opts" role="group">${opts}</div>${first ? adjustHTML(sc, r, u) : ''}`;
     },
 
     results() {
@@ -535,12 +614,13 @@
       let plan = '';
       if (IV.dataFirst) plan += `<div class="plan-row d0"><span class="rank">#0</span><div class="plan-body"><strong>${esc(x.d0)}</strong><span>${esc(x.d0note)}</span></div><span class="prio A">DMS</span></div>`;
       if (!IV.ranked.length) plan += `<p class="muted">${esc(IV.observed.length ? x.planEmpty : x.noCandidates)}</p>`;
-      plan += IV.ranked.map((r, i) => `<div class="plan-row"><span class="rank num">#${i + 1}</span><div class="plan-body"><strong>${esc(t('interventions')[r.id])}</strong>
-          <span>${esc(t('q.ineff')[r.ineff].name)}${r.estimate.estimable && r.estimate.dG > 0 ? ' · −' + fmt(r.estimate.dG / 1e6, 1) + ' t CO₂e' : ''}${r.governancePlan ? ' · ' + esc(t('q.iv.govPlan')) : ''}</span></div>
+      plan += IV.ranked.map((r, i) => `<div class="plan-row"><span class="rank num">#${i + 1}</span><div class="plan-body"><strong>${esc(ivName(r.id))}</strong>
+          <span>${esc(t('interventions')[r.id])}</span>
+          <span>${r.ineff} · ${esc(t('q.ineff')[r.ineff].name)}${r.estimate.estimable && r.estimate.dG > 0 ? ' · −' + fmt(r.estimate.dG / 1e6, 1) + ' t CO₂e' : ''}${r.governancePlan ? ' · ' + esc(t('q.iv.govPlan')) : ''}</span></div>
           <span class="ipi num">${fmt(r.ipi, 1)}</span><span class="prio ${r.cls}">${r.cls}</span></div>`).join('');
       IV.ranked.forEach(r => { if (!S.monitoring[r.id]) S.monitoring[r.id] = { freq: 'semiannual', owner: 'mm' }; });
       const monitor = IV.ranked.length ? `<section class="res-sec"><h2>${esc(x.monitorTitle)}</h2><div class="table-wrap"><table class="mon-table"><thead><tr><th>${esc(x.monitorCols.intv)}</th><th>${esc(x.monitorCols.ind)}</th><th>${esc(x.monitorCols.freq)}</th><th>${esc(x.monitorCols.owner)}</th></tr></thead><tbody>
-          ${IV.ranked.map(r => { const m = S.monitoring[r.id]; return `<tr><td>${esc(t('interventions')[r.id])}</td><td>${esc(x.indicators[CCF.MONITORING[r.ineff]])}</td>
+          ${IV.ranked.map(r => { const m = S.monitoring[r.id]; return `<tr><td>${esc(ivName(r.id))}</td><td>${esc(x.indicators[CCF.MONITORING[r.ineff]])}</td>
             <td>${selectHTML('monitoring.' + r.id + '.freq', entries(x.freq), m.freq)}</td><td>${selectHTML('monitoring.' + r.id + '.owner', entries(x.owners), m.owner)}</td></tr>`; }).join('')}
           </tbody></table></div><p class="muted small">${esc(x.systemInd)}</p></section>` : '';
       return head({ eyebrow: x.eyebrow, title: x.title, sub: x.sub }) + `
@@ -600,9 +680,35 @@
           <div class="thanks-actions"><button type="button" class="btn btn-primary btn-lg" data-act="print">${ICON('download')}${esc(x.download)}</button>
           <button type="button" class="btn btn-ghost btn-lg" data-act="newrun">${esc(x.newRun)}</button>
           <a class="btn btn-ghost btn-lg" href="../${lang === 'en' ? '?lang=en' : ''}">${esc(x.home)}</a></div>
-          <p class="muted small">${esc(x.printHint)}</p></div>`;
+          <p class="muted small">${esc(x.printHint)}</p></div>
+        <section class="card thanks-authors"><span class="eyebrow">${esc(x.authorsTitle)}</span>
+          <p class="muted">${esc(x.paperLine.replace('{title}', CONTENT.paperTitle))}</p>${authorsGrid()}</section>`;
     }
   };
+
+  function benefitText(r) {
+    const x = t('q.ivSelect');
+    const e = r.estimate;
+    if (!e.estimable) return x.benefitNone;
+    if (e.dG <= 0) return x.benefitZero;
+    const tons = e.dG / 1e6;
+    return x.benefit.replace('{t}', fmt(tons, tons < 10 ? 1 : 0));
+  }
+
+  // "Controlla le stime del framework": ipotesi di riduzione, impatto stimato e soggetti da coinvolgere.
+  function adjustHTML(sc, r, u) {
+    const x = t('q.iv');
+    const lever = r.scenario ? `<label class="lever"><span id="iv-lever-label"></span>
+        <input type="range" class="range" min="0" max="100" step="1" value="${CCF.num(u.leverPct) !== null ? u.leverPct : Math.round(r.scenario.lever * 100)}" data-bind="interventions.${sc.ivId}.leverPct" aria-label="${esc(x.reduction)}"></label>` : '';
+    const row = (dim, label, opts, glyph) => `<div class="qrow"><div class="qrow-label">${esc(label)}</div>
+        <div class="chips5" role="group">${opts.map((l, i) => `<button type="button" class="c5" data-ivset="${sc.ivId}" data-dim="${dim}" data-value="${i + 1}" aria-pressed="false">
+          ${glyph === 'gcs' ? ICON(GCS_ICON[i]) : SCALE(i + 1)}<span>${esc(l)}</span></button>`).join('')}</div>
+        <div class="qrow-note" id="note-${dim}"></div></div>`;
+    return `<details class="more iv-adjust"><summary><span>${ICON('radar')}${esc(x.adjust)}</span></summary>
+      <div class="iv-adjust-body"><p class="muted small">${esc(x.adjustNote)}</p>
+        ${r.scenario ? `<div class="iv-estimate"><span class="eyebrow">${ICON('leaf')}${esc(x.reduction)}</span><div class="iv-pct" id="iv-pct"></div>${lever}</div>` : ''}
+        ${r.impactProposed !== null ? row('impact', x.qImpact, x.impact) : ''}${row('gcs', x.qGcs, x.gcs, 'gcs')}</div></details>`;
+  }
 
   function selectHTML(path, options, value) {
     return `<select data-bind="${path}">${options.map(([v, l]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
@@ -628,7 +734,7 @@
     const ang = i => -Math.PI / 2 + i * 2 * Math.PI / N;
     const pt = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
     const poly = r => axes.map((_, i) => pt(i, r).map(v => v.toFixed(1)).join(',')).join(' ');
-    const sevColor = v => ['#10B981', '#84CC16', '#F59E0B', '#F97316', '#DC2626'][CCF.band(v) - 1];
+    const sevColor = v => SEV_COLOR[CCF.band(v) - 1];
     let g = '';
     [0.2, 0.4, 0.6, 0.8, 1].forEach(k => { g += `<polygon points="${poly(Rr * k)}" class="ring${k === 1 ? ' outer' : ''}"/>`; });
     axes.forEach((_, i) => { const [x, y] = pt(i, Rr); g += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="spoke"/>`; });
@@ -693,7 +799,7 @@
     else if (sc.kind === 'chapter') label = t('ui.startChapter');
     else if (sc.kind === 'results') label = t('q.results.toEval');
     else if (sc.kind === 'final') { label = t('q.final.submit'); act = 'submit'; }
-    const hint = sc.kind === 'choice' || sc.kind === 'scale' || sc.kind === 'truth' || sc.kind === 'ineff' ? `<span class="q-hint">${esc(t('ui.keysHint'))}</span>` : `<span class="q-hint">${esc(t('ui.saved'))}</span>`;
+    const hint = `<span class="q-hint"><span class="q-saved">${ICON('check')}${esc(t('ui.saved'))}</span><button type="button" class="q-more" data-act="help">${esc(t('ui.moreHelp'))}</button></span>`;
     return `<nav class="q-nav">${back}${hint}<button type="button" class="btn btn-primary btn-lg" data-act="${act}" id="next-btn"${ok ? '' : ' disabled'}>${esc(label)}${ICON('arrowRight')}</button></nav>`;
   }
 
@@ -730,8 +836,21 @@
     if (sc.kind === 'distance') { const v = CCF.num(S.baseline.oneWay); const el = $('#dist-value'); if (el) el.innerHTML = `${v === null ? '—' : fmt(v, v % 1 ? 1 : 0)}<span> km</span>`; }
     if (sc.kind === 'modes') modesLive();
     if (sc.kind === 'modeDistances') R.baseline.rows.forEach(r => { const el = $('#dv-' + r.id); if (el) { const v = r.oneWay; el.textContent = `${fmt(v, v % 1 ? 1 : 0)} km`; } });
-    if (sc.kind === 'iv') ivLive(sc);
+    if (sc.kind === 'ivq') ivLive(sc);
+    if (sc.kind === 'ivSelect') ivSelectLive();
     if (sc.kind === 'thanks') syncStatus();
+  }
+
+  function ivSelectLive() {
+    const el = $('#iv-summary');
+    if (!el) return;
+    const x = t('q.ivSelect');
+    const chosen = R.interventions.list.filter(z => z.selected);
+    const questions = chosen.reduce((s, z) => s + ivDims(z).length, 0);
+    const m = Math.max(1, Math.round(questions * 10 / 60));
+    el.textContent = !chosen.length ? x.summaryNone : chosen.length === 1 ? x.summaryOne : x.summary.replace('{k}', chosen.length).replace('{m}', m);
+    el.classList.toggle('none', !chosen.length);
+    $$('[data-toggle-iv]').forEach(b => { const z = ivResult(b.dataset.toggleIv); b.setAttribute('aria-pressed', String(!!(z && z.selected))); });
   }
 
   function modesLive() {
@@ -767,10 +886,12 @@
     const e = r.estimate;
     const dg = $('#iv-dg'), pct = $('#iv-pct'), unit = $('#iv-unit');
     if (dg) {
-      if (!e.estimable) { dg.textContent = '—'; unit.textContent = x.reasons[e.reason] || ''; pct.textContent = ''; }
-      else if (e.dG <= 0) { dg.textContent = fmt(0); unit.textContent = x.negative; pct.textContent = ''; }
-      else { countTo(dg, e.dG / 1e6, 1); unit.textContent = x.unit; pct.textContent = x.pct.replace('{p}', fmt(r.dGpct, 1)); }
+      if (!e.estimable) { dg.textContent = '—'; unit.textContent = x.reasons[e.reason] || ''; }
+      else if (e.dG <= 0) { dg.textContent = fmt(0); unit.textContent = x.negative; }
+      else { countTo(dg, e.dG / 1e6, 1, '−'); unit.textContent = x.unit; }
+      dg.classList.toggle('none', !e.estimable);
     }
+    if (pct) pct.textContent = e.estimable && e.dG > 0 ? x.pct.replace('{p}', fmt(r.dGpct, 1)) : '';
     const lab = $('#iv-lever-label');
     if (lab && r.scenario) {
       const sc2 = r.scenario, p = Math.round((e.lever !== undefined ? e.lever : sc2.lever) * 100);
@@ -778,36 +899,25 @@
         : sc2.type === 'cut' ? x.lever.cut.replace('{pct}', p)
         : sc2.base === 'acr' ? x.lever.avoid_acr.replace('{pct}', p).replace('{acr}', R.acr ? fmt(R.acr.ACR * 100, 0) : '—') : x.lever.avoid_total.replace('{pct}', p);
     }
-    const values = { cost: r.cost, acc: r.acc, data: r.data, gcs: r.gcs, impact: r.impact };
+    // stime correggibili (impatto e soggetti coinvolti): il pallino segna il valore proposto dal framework
+    const values = { gcs: r.gcs, impact: r.impact };
     Object.keys(values).forEach(dim => {
       $$(`[data-ivset="${sc.ivId}"][data-dim="${dim}"]`).forEach(b => {
         const v = Number(b.dataset.value);
         b.setAttribute('aria-pressed', String(values[dim] === v));
         b.classList.toggle('preset', (dim === 'gcs' && v === r.gcsDefault) || (dim === 'impact' && v === r.impactProposed));
-        b.disabled = dim === 'data' && r.dataCap && v > 2;
       });
     });
-    const note = (id, text) => { const el = $('#note-' + id); if (el) el.textContent = text; };
-    note('data', r.dataCap ? x.capped : '');
-    note('gcs', r.governancePlan ? x.govPlan : '');
-    const sg = $('#sum-gcs'); if (sg) sg.textContent = r.gcs ? x.gcs[r.gcs - 1] : '—';
-    const si = $('#sum-impact'); if (si) si.textContent = r.impact ? x.impact[r.impact - 1] : '—';
-    const res = $('#iv-result');
-    if (res) {
-      res.className = 'iv-result' + (r.ipi === null ? ' pending' : ' cls-' + r.cls);
-      res.innerHTML = r.ipi === null ? `<span>${esc(x.pending)}</span>`
-        : `<span class="prio ${r.cls}">${r.cls}</span><div><strong>${esc(x.priority.replace('{c}', r.cls))}</strong><span>${esc(x.cls[r.cls])} · ${esc(x.ipi.replace('{v}', fmt(r.ipi, 1)))}</span></div>`;
-    }
-    const btn = $('#next-btn'); if (btn) btn.disabled = r.ipi === null;
+    const note = $('#note-gcs'); if (note) note.textContent = r.governancePlan ? x.govPlan : '';
   }
 
-  function countTo(el, target, digits) {
+  function countTo(el, target, digits, prefix) {
     const from = Number(el.dataset.v || 0);
     el.dataset.v = target;
     const start = performance.now(), dur = 450;
     const step = now => {
       const k = Math.min(1, (now - start) / dur);
-      el.textContent = fmt(from + (target - from) * (1 - Math.pow(1 - k, 3)), digits);
+      el.textContent = (prefix || '') + fmt(from + (target - from) * (1 - Math.pow(1 - k, 3)), digits);
       if (k < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -828,7 +938,7 @@
     S.pos = target.id;
     if (target.ch <= TOTAL_CH) S.maxCh = Math.max(S.maxCh, target.ch);
     if (S.consent && !S.reached[target.ch] && target.ch <= TOTAL_CH) { S.reached[target.ch] = true; beacon(target.ch); }
-    if (target.kind === 'results') queueAssessment();
+    if (target.kind === 'results') queueResponse('results');
     persist();
     render(delta < 0 ? 'back' : 'fwd');
   }
@@ -929,9 +1039,10 @@
     else if (act === 'resume') { S.pos = currentList.filter(s => s.ch === Math.min(S.maxCh, TOTAL_CH))[0].id; persist(); render('fwd'); }
     else if (act === 'restart') { if (window.confirm(t('ui.restartConfirm'))) reset(); }
     else if (act === 'newrun') { if (window.confirm(t('q.thanks.newConfirm'))) reset(); }
+    else if (act === 'help') openHelp();
     else if (act === 'privacy') openPrivacy();
     else if (act === 'closePrivacy') $('#privacy').close();
-    else if (act === 'print') printReport();
+    else if (act === 'print') printReport(true);
     else if (act === 'submit') submit();
     else if (act === 'mnsConfirm') { setMns(50, 80); afterChange(true); }
     else if (act === 'ineffSkip') {
@@ -963,9 +1074,20 @@
     }
     setPath(path, value);
     if (path === 'baseline.daysWeek') S.baseline.days = String(Number(value) * 44);
-    $$(`[data-choose="${CSS.escape(path)}"]`).forEach(b => { b.setAttribute('aria-pressed', String(b === el)); b.classList.toggle('on', b === el); });
+    // chi sceglie l'anonimato non lascia ruolo ed esperienza, nemmeno quelli indicati prima
+    if (path === 'feedback.share' && value === 'no') { delete S.feedback.role; delete S.feedback.experience; }
+    $$(`[data-choose="${CSS.escape(path)}"]`).forEach(b => {
+      const on = b.dataset.value === value;
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('on', on);
+    });
+    if (sc.kind === 'region') { const lab = $('#map-label'); if (lab) { lab.textContent = value === 'abroad' ? t('q.region.abroad') : value; lab.dataset.default = lab.textContent; } }
     if (sc.kind === 'yesno') { afterChange(true); if (value === 'no') scheduleNext(); return; }
     afterChange(false);
+    if (sc.kind === 'ivq' && sc.j === sc.m) {
+      const r = ivResult(sc.ivId);
+      if (r && r.ipi !== null) toast(t('q.iv.verdict').replace('{name}', ivName(sc.ivId)).replace('{c}', r.cls) + ' · ' + t('q.iv.cls')[r.cls]);
+    }
     if (sc.auto) scheduleNext();
   }
 
@@ -1045,6 +1167,12 @@
       return;
     }
     if (typing || e.altKey || e.ctrlKey || e.metaKey) return;
+    // le regioni della mappa si scelgono anche da tastiera
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('reg')) {
+      e.preventDefault();
+      e.target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      return;
+    }
     if (e.key === 'Enter' && !e.target.closest('button,a,summary,label')) {
       const btn = $('#next-btn'); if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
       return;
@@ -1079,9 +1207,21 @@
     } else {
       const h = H[sc.help] || H.intro;
       title = h.title; body = h.body; fw = h.fw ? h.fw.replace('{k}', sc.helpVars ? sc.helpVars.k : '') : '';
+      if (sc.kind === 'ivq') {
+        const r = ivResult(sc.ivId);
+        fw = fw.replace('{formal}', t('interventions')[sc.ivId]).replace('{code}', r ? r.ineff : '').replace('{role}', r ? t('q.ivSelect')[r.role] : '');
+      }
     }
+    const keys = ['choice', 'scale', 'truth', 'ineff', 'ivq'].includes(sc.kind) ? `<p class="help-keys">${esc(t('ui.keysHelp'))}</p>` : '';
+    const C = CONTENT.contact;
+    const mail = C.mailUser + '@' + C.mailDomain;
+    const authors = CONTENT.authors.map(a => `<div class="help-author"><span class="avatar" aria-hidden="true">${esc(a.initials)}</span>
+      <div><b>${esc(a.name)}</b><span>${esc(a.role[lang])}</span><p>${esc(a.bio[lang])}</p></div></div>`).join('');
     $('#help-body').innerHTML = `<h3 id="help-title">${esc(title)}</h3>${(body || []).map(p => `<p>${esc(p)}</p>`).join('')}
-      ${fw ? `<div class="help-fw"><strong>${esc(t('ui.helpFw'))}</strong>${esc(fw)}</div>` : ''}`;
+      ${fw ? `<div class="help-fw"><strong>${esc(t('ui.helpFw'))}</strong>${esc(fw)}</div>` : ''}${keys}
+      <div class="help-contact"><strong>${esc(H.contact.title)}</strong><p>${esc(H.contact.text.replace('{name}', C.name))}</p>
+        <div class="help-links"><a href="mailto:${esc(mail)}">${ICON('mail')}${esc(mail)}</a><a href="${esc(C.linktree)}" target="_blank" rel="noopener">${ICON('link')}linktr.ee/corazzini</a></div>
+        <details class="help-more"><summary>${esc(H.authorsTitle)}</summary><div class="help-authors">${authors}</div></details></div>`;
     $('#help-eyebrow').textContent = t('ui.helpEyebrow');
     $('.help-close').setAttribute('aria-label', t('ui.close'));
     if (!$('#help-drawer').classList.contains('open')) lastFocus = document.activeElement;
@@ -1152,8 +1292,8 @@
 
   // Coda degli invii: salvata nel browser, svuotata quando il server conferma, ritentata finché serve.
   let flushing = false, retryTimer = null;
-  function enqueue(type, row) {
-    S.outbox.push({ id: newMsgId(), type, row, hp: S.hp || '' });
+  function enqueue(type, row, extra) {
+    S.outbox.push(Object.assign({ id: newMsgId(), type, row, hp: S.hp || '' }, extra || {}));
     store.save(S);
     flush();
   }
@@ -1231,51 +1371,126 @@
     };
   }
 
-  function assessmentRow() {
-    const D = R.diagnosis, B = R.baseline, top = R.interventions.ranked[0];
-    const elapsed = Object.keys(S.timings).reduce((s, k) => s + S.timings[k], 0) + (Date.now() - enteredAt) / 1000;
-    return {
-      sid: S.sid, version: CCF.VERSION, lang, duration_sec: Math.round(elapsed),
-      org_type: S.profile.orgType, sector: S.profile.sector, employees: CCF.num(S.profile.employees), region: S.profile.region,
-      shift_pct: CCF.num(S.profile.shiftPct), pscl: S.profile.pscl,
-      dms_declared: R.dms.declared, dms_effective: R.dms.effective, low_reliability: R.dms.lowReliability.join(' '),
-      mns: round(R.mns.value, 1), acc: round(R.acc.value, 1), acc_answered: R.acc.answered, cdr: round(R.cdr.value, 1), cdr_answered: R.cdr.answered,
-      employees_modal: B.N, pax_km: Math.round(B.A), tco2e: round(B.tCO2e, 2), ci_g_paxkm: round(B.CI, 1), ei_kwh_paxkm: round(B.EI, 4),
-      acr: R.acr ? round(R.acr.ACR, 3) : null,
-      i1: D.I1.value, i2: D.I2.value, i3: D.I3.value, i4: D.I4.value, i5: D.I5.value,
-      i1_overridden: D.I1.overridden, i4_overridden: D.I4.overridden, i5_overridden: D.I5.overridden,
-      prevailing: R.prevailing.join(' '), observed: R.interventions.observed.join(' '),
-      n_evaluated: R.interventions.ranked.length,
-      top1: top ? top.id : '', top1_ipi: top ? round(top.ipi, 2) : null, top1_class: top ? top.cls : '',
-      data_first: R.interventions.dataFirst,
-      inputs_json: JSON.stringify(researchInputs()),
-      results_json: JSON.stringify(researchResults())
-    };
+  // ---------- righe per il foglio di validazione ----------
+  // Una riga per analisi in "risposte" (aggiornata a ogni revisione), più una riga per intervento candidato in
+  // "interventi" e una per mezzo usato in "mezzi". Le colonne sono descritte nella scheda "dizionario" del foglio.
+  function deviceType() {
+    const w = window.innerWidth || 0;
+    return w < 760 ? 'mobile' : w < 1180 ? 'tablet' : 'desktop';
   }
 
-  // Accoda la valutazione quando si arriva ai risultati; se nel frattempo è cambiata, ne accoda una nuova revisione.
-  function queueAssessment() {
+  function responseRow(stage) {
+    const p = S.profile, D = R.diagnosis, B = R.baseline, IV = R.interventions, f = S.feedback;
+    const elapsed = Object.keys(S.timings).reduce((s, k) => s + S.timings[k], 0) + (Date.now() - enteredAt) / 1000;
+    const solo = B.rows.find(z => z.id === 'car_solo');
+    const row = {
+      sid: S.sid, stage, engine_version: CCF.VERSION, ui_version: UI_VERSION, lang, device: deviceType(), duration_sec: Math.round(elapsed),
+      org_type: p.orgType, sector: p.sector, employees: CCF.num(p.employees), region: p.region, shift_pct: CCF.num(p.shiftPct), pscl: p.pscl,
+      dms_declared: R.dms.declared, dms_effective: R.dms.effective, low_reliability: R.dms.lowReliability.join(' '), data_first: IV.dataFirst,
+      mns_essential_pct: CCF.num(S.mns.qe), mns_partial_pct: CCF.num(S.mns.qp), mns_remote_pct: CCF.num(S.mns.qr), mns: round(R.mns.value, 1),
+      days_week: CCF.num(S.baseline.daysWeek), one_way_km: CCF.num(S.baseline.oneWay),
+      employees_modal: B.N, modes_used: B.rows.filter(z => z.n > 0).length,
+      share_car_solo_pct: B.N && solo ? round(solo.n / B.N * 100, 1) : null,
+      params_custom: B.rows.some(z => ['e', 'o', 'k', 'phi'].some(k => has((S.baseline.modes[z.id] || {})[k]))),
+      pax_km: Math.round(B.A), tco2e: round(B.tCO2e, 2), ci_g_paxkm: round(B.CI, 1), ei_kwh_paxkm: round(B.EI, 4),
+      acr: R.acr ? round(R.acr.ACR, 3) : null, days_now: R.acr ? round(R.acr.daysNow, 2) : null, days_needed: R.acr ? round(R.acr.daysNeeded, 2) : null
+    };
+    const item = (arr, k) => {
+      const v = S[arr][k];
+      if (v === 'nd') return 'nd';
+      if (arr === 'cdr' && k === 3 && String(p.shiftPct) === '0' && !has(v)) return 'na';
+      return CCF.num(v);
+    };
+    for (let k = 0; k < 7; k++) row['acc_' + (k + 1)] = item('acc', k);
+    Object.assign(row, { acc: round(R.acc.value, 1), acc_answered: R.acc.answered, acc_nd: R.acc.nd, acc_reliable: R.acc.reliable });
+    for (let k = 0; k < 5; k++) row['cdr_' + (k + 1)] = item('cdr', k);
+    Object.assign(row, { cdr: round(R.cdr.value, 1), cdr_answered: R.cdr.answered, cdr_nd: R.cdr.nd, cdr_reliable: R.cdr.reliable });
+    CODES.forEach(c => {
+      const d = D[c], key = c.toLowerCase(), direct = DIRECT.includes(c);
+      row[key] = d.value;
+      row[key + '_derived'] = direct ? null : d.derived;
+      row[key + '_source'] = S.skipped[c] ? 'skipped'
+        : direct ? (has(S.direct[c]) ? 'direct' : 'missing')
+        : d.overridden ? (d.derived === null ? 'direct' : 'override') : d.derived !== null ? 'derived' : 'missing';
+      row[key + '_note'] = direct ? (S.directNotes[c] || '') : (S.overrides[c] && S.overrides[c].note) || '';
+    });
+    const radar = Object.fromEntries(radarAxes());
+    const defaults = defaultSelection(R);
+    const sel = IV.list.filter(z => z.selected);
+    const top = IV.ranked[0];
+    Object.assign(row, {
+      prevailing: R.prevailing.join(' '), observed: IV.observed.join(' '),
+      coherence_rule: CODES.filter(c => D[c].coherenceRule).join(' '),
+      radar_ci: round(radar.CI, 1), radar_data: round(radar.DATA, 1), radar_gov: round(radar.GOV, 1),
+      candidates_n: IV.list.length, preselected_n: IV.list.filter(z => defaults[z.id]).length, selected_n: sel.length, evaluated_n: IV.ranked.length,
+      selection_changed_n: IV.list.filter(z => (S.interventions[z.id] || {}).selected !== undefined && !!S.interventions[z.id].selected !== !!defaults[z.id]).length,
+      impact_overridden_n: sel.filter(z => z.impactOverridden).length, gcs_overridden_n: sel.filter(z => z.gcs !== z.gcsDefault).length,
+      lever_changed_n: sel.filter(z => CCF.num((S.interventions[z.id] || {}).leverPct) !== null).length, data_capped_n: sel.filter(z => z.dataCapped).length,
+      class_a_n: IV.ranked.filter(z => z.cls === 'A').length, class_b_n: IV.ranked.filter(z => z.cls === 'B').length, class_c_n: IV.ranked.filter(z => z.cls === 'C').length,
+      top1: top ? top.id : '', top1_ipi: top ? round(top.ipi, 2) : null, top1_class: top ? top.cls : ''
+    });
+    Object.assign(row, {
+      f1_understandable: CCF.num(f.f1), f2_prevailing_matches: CCF.num(f.f2), f3_plausible_link: CCF.num(f.f3),
+      f4_priority_useful: CCF.num(f.f4), f5_data_available: CCF.num(f.f5), f6_would_use: CCF.num(f.f6),
+      c1_uncovered: f.c1 || '', c1_text: f.c1 === 'yes' ? (f.c1text || '') : '', c2_overlap: f.c2 || '', c2_text: f.c2 === 'yes' ? (f.c2text || '') : '',
+      profile_shared: f.share || '', role: f.share === 'yes' ? (f.role || '') : '', experience: f.share === 'yes' ? (f.experience || '') : '',
+      channel: f.channel || '', open_text: f.open || '', report_printed: S.printed || 0
+    });
+    for (let c = 1; c <= TOTAL_CH; c++) row['t_ch' + c] = S.timings[c] !== undefined ? Math.round(S.timings[c]) : null;
+    row.inputs_json = JSON.stringify(researchInputs());
+    row.results_json = JSON.stringify(researchResults());
+    return row;
+  }
+
+  function interventionRows() {
+    const defaults = defaultSelection(R);
+    const order = orderedCandidates().map(z => z.id);
+    const ranked = R.interventions.ranked.map(z => z.id);
+    return R.interventions.list.map(z => {
+      const u = S.interventions[z.id] || {};
+      const m = S.monitoring[z.id] || {};
+      const inPlan = ranked.indexOf(z.id) >= 0;
+      return {
+        intervention: z.id, name: I18N.it.interventions[z.id], inefficiency: z.ineff, role: z.role, candidate_order: order.indexOf(z.id) + 1,
+        preselected: !!defaults[z.id], selected: z.selected,
+        estimable: z.estimate.estimable, not_estimable_reason: z.estimate.reason || '',
+        lever_default: z.scenario ? z.scenario.lever : null, lever: z.estimate.lever === undefined ? null : round(z.estimate.lever, 3),
+        dg_tco2e: z.estimate.estimable ? round(z.estimate.dG / 1e6, 3) : null, dg_pct: round(z.dGpct, 2),
+        impact_proposed: z.impactProposed, impact: z.impact, impact_overridden: z.impactOverridden,
+        gcs_default: z.gcsDefault, gcs: z.gcs, gcs_overridden: z.gcs !== z.gcsDefault,
+        data_intensive: z.dataIntensive, data_cap: z.dataCap, data_declared: CCF.num(u.data), data: z.data, data_capped: z.dataCapped,
+        acceptance: z.acc, cost: z.cost, ipi: round(z.ipi, 3), class: z.cls || '', plan_rank: inPlan ? ranked.indexOf(z.id) + 1 : null,
+        monitoring_freq: inPlan ? (m.freq || '') : '', monitoring_owner: inPlan ? (m.owner || '') : ''
+      };
+    });
+  }
+
+  function modeRows() {
+    const B = R.baseline;
+    return B.rows.filter(z => z.n > 0).map(z => {
+      const own = S.baseline.modes[z.id] || {};
+      return {
+        mode: z.id, n: z.n, share_pct: B.N ? round(z.n / B.N * 100, 1) : null,
+        one_way_km: round(z.d / 2, 2), distance_custom: CCF.num(own.oneWay) !== null, days_year: z.g,
+        e_kwh_km: z.e, occupancy: z.o, capacity: z.k, phi_g_kwh: z.phi, params_custom: ['e', 'o', 'k', 'phi'].some(k => has(own[k])),
+        pax_km: Math.round(z.A), ei_kwh_paxkm: round(z.EI, 4), load_factor: round(z.LF, 3), ci_g_paxkm: round(z.CI, 2), tco2e: round(z.G / 1e6, 3)
+      };
+    });
+  }
+
+  // Accoda l'analisi quando si arriva ai risultati e, completa di valutazione, all'invio finale.
+  // Il foglio tiene l'ultima revisione per sid: una nuova revisione parte solo se qualcosa è cambiato.
+  function queueResponse(stage) {
     if (!S.consent) return;
     R = evaluate();
-    if (!R.baseline.complete && !R.prevailing.length) return;
-    const row = assessmentRow();
-    const h = hash(row.inputs_json + row.results_json);
+    if (stage === 'results' && !R.baseline.complete && !R.prevailing.length) return;
+    const row = responseRow(stage);
+    const h = hash(JSON.stringify([stage, row.inputs_json, row.results_json, S.feedback, S.printed || 0]));
     if (h === S.sentHash) return;
     S.rev += 1;
     S.sentHash = h;
     row.rev = S.rev;
-    enqueue('assessments', row);
-  }
-
-  function feedbackRow() {
-    const f = S.feedback;
-    return {
-      sid: S.sid, version: CCF.VERSION, lang,
-      f1_understandable: CCF.num(f.f1), f2_prevailing_matches: CCF.num(f.f2), f3_plausible_link: CCF.num(f.f3),
-      f4_priority_useful: CCF.num(f.f4), f5_data_available: CCF.num(f.f5), f6_would_use: CCF.num(f.f6),
-      c1_uncovered: f.c1, c1_text: f.c1 === 'yes' ? (f.c1text || '') : '', c2_overlap: f.c2, c2_text: f.c2 === 'yes' ? (f.c2text || '') : '',
-      role: f.role, experience: f.experience, channel: f.channel || '', open_text: f.open || ''
-    };
+    enqueue('response', row, { interventions: interventionRows(), modes: modeRows() });
   }
 
   function toast(text) {
@@ -1289,7 +1504,8 @@
 
   function submit() {
     const msg = $('#form-msg');
-    const missing = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'c1', 'c2', 'role', 'experience'].find(k => !S.feedback[k]);
+    const required = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'c1', 'c2', 'share'].concat(S.feedback.share === 'yes' ? ['role', 'experience'] : []);
+    const missing = required.find(k => !S.feedback[k]);
     if (missing) {
       toast(lang === 'it' ? 'Manca ancora una risposta: ti riporto lì.' : 'One answer is still missing: taking you there.');
       S.pos = missing;
@@ -1297,8 +1513,7 @@
       return;
     }
     if (S.contact.ok && !EMAIL_RE.test((S.contact.email || '').trim())) { if (msg) msg.textContent = t('q.final.invalidEmail'); return; }
-    queueAssessment();
-    enqueue('feedback', feedbackRow());
+    queueResponse('submitted');
     // l'email resta nel browser solo finché il server non conferma l'invio
     if (S.contact.ok) enqueue('contacts', { lang, email: S.contact.email.trim(), interview_consent: true });
     S.code = S.sid;
@@ -1330,10 +1545,10 @@
     const s3 = `${B.complete ? `<table class="rep-table"><thead><tr><th>${esc(r.cols.mode)}</th><th>${esc(r.cols.ei)}</th><th>${esc(r.cols.lf)}</th><th>${esc(r.cols.ci)}</th><th>${esc(r.cols.g)}</th></tr></thead><tbody>
         ${rowsN.map(z => `<tr><td>${esc(t('options.modes')[z.id])}</td><td>${fmt(z.EI, 3)}</td><td>${fmt(z.LF * 100, 0)}%</td><td>${fmt(z.CI, 0)}</td><td>${fmt(z.G / 1e6, 1)}</td></tr>`).join('')}</tbody></table>` : ''}
       <div class="rep-tiles">${tile(x.kpi.ci[0], fmt(B.CI, 0), x.kpi.ci[1])}${tile(x.kpi.ei[0], fmt(B.EI, 3), x.kpi.ei[1])}${tile(x.kpi.acr[0], R.acr ? fmt(R.acr.ACR * 100, 0) + '%' : '—', acrSub)}</div>
-      ${IV.list.filter(z => z.selected && z.estimate.estimable).length ? `<p class="rep-h">${esc(r.dg)}</p><table class="rep-table"><tbody>${IV.list.filter(z => z.selected && z.estimate.estimable).map(z => `<tr><td>${esc(t('interventions')[z.id])}</td><td>${fmt(z.estimate.dG / 1e6, 1)} t · ${fmt(z.dGpct, 1)}%</td></tr>`).join('')}</tbody></table>` : ''}`;
+      ${IV.list.filter(z => z.selected && z.estimate.estimable).length ? `<p class="rep-h">${esc(r.dg)}</p><table class="rep-table"><tbody>${IV.list.filter(z => z.selected && z.estimate.estimable).map(z => `<tr><td>${esc(ivName(z.id))}</td><td>${fmt(z.estimate.dG / 1e6, 1)} t · ${fmt(z.dGpct, 1)}%</td></tr>`).join('')}</tbody></table>` : ''}`;
     let s4 = IV.dataFirst ? `<p class="rep-d0"><strong>#0 · ${esc(x.d0)}</strong> — ${esc(x.d0note)}</p>` : '';
     s4 += IV.ranked.length ? `<table class="rep-table"><thead><tr><th>#</th><th>${esc(x.monitorCols.intv)}</th><th>IPI</th><th></th><th>${esc(x.monitorCols.ind)}</th><th>${esc(x.monitorCols.freq)}</th><th>${esc(x.monitorCols.owner)}</th></tr></thead><tbody>
-      ${IV.ranked.map((z, i) => { const m = S.monitoring[z.id] || { freq: 'semiannual', owner: 'mm' }; return `<tr><td>${i + 1}</td><td>${esc(t('interventions')[z.id])}</td><td>${fmt(z.ipi, 1)}</td><td><span class="prio ${z.cls}">${z.cls}</span></td><td>${esc(x.indicators[CCF.MONITORING[z.ineff]])}</td><td>${esc(x.freq[m.freq])}</td><td>${esc(x.owners[m.owner])}</td></tr>`; }).join('')}
+      ${IV.ranked.map((z, i) => { const m = S.monitoring[z.id] || { freq: 'semiannual', owner: 'mm' }; return `<tr><td>${i + 1}</td><td>${esc(ivName(z.id))}<div class="rep-formal">${esc(t('interventions')[z.id])}</div></td><td>${fmt(z.ipi, 1)}</td><td><span class="prio ${z.cls}">${z.cls}</span></td><td>${esc(x.indicators[CCF.MONITORING[z.ineff]])}</td><td>${esc(x.freq[m.freq])}</td><td>${esc(x.owners[m.owner])}</td></tr>`; }).join('')}
       </tbody></table><p class="rep-note">${esc(x.systemInd)}</p>` : `<p>${esc(IV.observed.length ? x.planEmpty : x.noCandidates)}</p>`;
     return `<div class="rep"><div class="rep-head"><div class="rep-eyebrow">${esc(r.eyebrow)}</div><div class="rep-title">${esc(title)}</div><div class="rep-date">${esc(r.generated.replace('{date}', date).replace('{v}', CCF.VERSION))}</div></div>
       <section><h2>${esc(r.s1)}</h2>${s1}</section><section><h2>${esc(r.s2)}</h2>${s2}</section><section><h2>${esc(r.s3)}</h2>${s3}</section><section><h2>${esc(r.s4)}</h2>${s4}</section>
@@ -1341,7 +1556,13 @@
   }
 
   function fillPrint() { R = evaluate(); $('#print-root').innerHTML = reportHTML(); }
-  function printReport() { fillPrint(); setTimeout(() => window.print(), 80); }
+  // Il report si apre da solo all'invio; contano come download solo le aperture chieste dal pulsante,
+  // che dopo l'invio aggiornano la riga nel foglio.
+  function printReport(manual) {
+    if (manual) { S.printed = (S.printed || 0) + 1; if (S.code) queueResponse('submitted'); persist(); }
+    fillPrint();
+    setTimeout(() => window.print(), 80);
+  }
 
   // ---------- avvio ----------
   document.addEventListener('click', onClick);
@@ -1349,6 +1570,16 @@
   app.addEventListener('input', onInput);
   app.addEventListener('change', onChange);
   app.addEventListener('pointerdown', onPointerDown);
+  // sulla mappa il nome della regione compare al passaggio del mouse o del focus
+  const mapLabel = (e, show) => {
+    const p = e.target.closest && e.target.closest('.reg');
+    const lab = $('#map-label');
+    if (p && lab) lab.textContent = show ? p.dataset.name : lab.dataset.default;
+  };
+  app.addEventListener('pointerover', e => mapLabel(e, true));
+  app.addEventListener('pointerout', e => mapLabel(e, false));
+  app.addEventListener('focusin', e => mapLabel(e, true));
+  app.addEventListener('focusout', e => mapLabel(e, false));
   document.addEventListener('keydown', onKey);
   $$('.lang-switch button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
   $('#help-fab').addEventListener('click', openHelp);

@@ -8,9 +8,9 @@ window.CCF_I18N = {
     },
     ui: {
       back: 'Indietro', next: 'Avanti', start: "Inizia l'analisi", startChapter: 'Inizia', skip: 'Salta',
-      dontKnow: 'Non lo so', saved: 'Salvato nel browser', chapterOf: 'Capitolo {n} di {t}',
+      dontKnow: 'Non lo so', saved: 'Salvato nel browser', moreHelp: 'Altri dubbi?', chapterOf: 'Capitolo {n} di {t}',
       helpAria: "Cosa c'è in questa schermata?", helpEyebrow: "Cosa c'è a schermo", helpFw: 'Nel framework', close: 'Chiudi',
-      factLabel: 'Lo sapevi?', chapterMeta: '{n} domande · circa {m} min', keysHint: 'Puoi rispondere con i tasti numerici e andare avanti con Invio.',
+      factLabel: 'Lo sapevi?', chapterMeta: '{n} domande · circa {m} min', keysHint: 'Puoi rispondere con i tasti numerici e andare avanti con Invio.', keysHelp: 'Da tastiera: i numeri scelgono la risposta, Invio va avanti, 0 vale «Non lo so».',
       estimateTag: 'Stima dai tuoi dati', presetTag: 'Proposto', optional: 'facoltativo',
       restart: 'Ricomincia da capo', restartConfirm: "Vuoi cancellare l'analisi salvata in questo browser e ricominciare?",
       resumeTitle: 'Bentornato', resumeText: 'Hai un\'analisi in corso in questo browser, al capitolo «{chapter}».', resumeBtn: 'Riprendi',
@@ -24,7 +24,7 @@ window.CCF_I18N = {
       4: { title: "Le alternative all'auto", desc: 'Sette domande su fermate, orari e percorsi intorno alla sede.' },
       5: { title: "Il ruolo dell'auto", desc: "Cinque domande su quanto l'auto è strutturale." },
       6: { title: 'Dove si spreca', desc: 'Cinque possibili inefficienze. Per tre ti proponiamo una stima dai tuoi dati: correggila se non ti convince.' },
-      7: { title: 'Cosa fare, in che ordine', desc: 'Il framework propone solo interventi che correggono le inefficienze emerse. Per ciascuno, tre valutazioni rapide.' },
+      7: { title: 'Cosa fare, in che ordine', desc: 'Ti proponiamo solo azioni che correggono i problemi emersi. Per ognuna, tre domande veloci: costo, accoglienza e dati.' },
       9: { title: 'La tua valutazione', desc: 'Sei frasi, una alla volta: ci dici quanto sono vere. È la parte che valida il framework.' }
     },
 
@@ -55,7 +55,7 @@ window.CCF_I18N = {
       orgType: { title: 'Che tipo di organizzazione è la tua?' },
       sector: { title: 'In quale settore opera?' },
       employees: { title: 'Quante persone lavorano nella sede?', sub: "Se l'organizzazione ha più sedi, scegline una: il framework lavora sede per sede." },
-      region: { title: 'In quale regione si trova la sede?', groups: ['Nord', 'Centro', 'Sud e isole'], abroad: 'Fuori Italia' },
+      region: { title: 'In quale regione si trova la sede?', sub: 'Tocca la regione sulla mappa oppure sceglila dall\'elenco.', groups: ['Nord', 'Centro', 'Sud e isole'], abroad: 'Fuori Italia', mapAria: 'Mappa delle regioni italiane', mapHint: 'Tocca una regione', listTitle: 'Oppure dall\'elenco', attribution: 'Confini: ISTAT, elaborazione openpolis (CC BY 4.0)' },
       shifts: { title: 'Quante persone lavorano su turni?', sub: 'Una stima va benissimo.' },
       pscl: { title: 'Avete un Piano degli spostamenti casa-lavoro?', sub: 'Il PSCL.' },
       dms: { title: 'Quali dati avete oggi sugli spostamenti dei dipendenti?', sub: 'Scegli il livello più alto che vi descrive davvero.' },
@@ -88,11 +88,11 @@ window.CCF_I18N = {
         { icon: 'lastMile', title: "Chi scende dal mezzo pubblico ha alternative per l'ultimo tratto?", options: ['Nessuna', 'Molto scomode o poco sicure', 'Parziali', 'Presenti ma migliorabili', 'Sì, efficaci'] }
       ],
       ineff: {
-        I1: { name: 'Capacità sottoutilizzata', title: 'Quanto viaggiano vuoti i mezzi che portano le persone in sede?', options: ['Quasi pieni: pochi posti liberi, poche auto con una sola persona', 'Qualche posto libero, ma poco', 'Occupazione media, o parecchie auto con una sola persona', 'Mezzi collettivi poco pieni, o molte auto con una sola persona', "Mezzi molto vuoti, o domina l'auto con una sola persona"] },
-        I2: { name: 'Duplicazione modale', title: 'Navette, autobus e servizi di altre aziende si sovrappongono su percorsi e orari?', options: ['No, nessun servizio duplicato', 'Solo ogni tanto', 'In parte, su alcuni percorsi o fasce orarie', 'Sì, sovrapposizioni evidenti', 'Sì: più servizi non coordinati e poco pieni sugli stessi percorsi'] },
-        I3: { name: 'Mismatch temporale', title: 'Gli orari dei mezzi alternativi all\'auto sono compatibili con quelli di lavoro?', options: ['Sì, con quasi tutti gli orari', 'Sì, salvo alcune fasce', 'Solo in parte: turni o orari principali coperti a metà', 'Poco: molti ingressi e uscite restano scoperti', "No: i turni principali non hanno alternative all'auto"] },
-        I4: { name: "Frizione dell'ultimo miglio", title: "Dalla fermata alla sede, l'ultimo tratto è comodo e sicuro?", options: ['Sì: breve, sicuro e continuo', 'Quasi sempre, con piccole criticità', 'Si fa, ma è scomodo', 'È lungo, poco sicuro o interrotto', "Di fatto impedisce di arrivare senza auto"] },
-        I5: { name: 'Domanda evitabile', title: 'Le persone vengono in sede più di quanto il lavoro richieda?', options: ['No, la presenza è quasi sempre necessaria', 'Poco: poche mansioni si possono fare da remoto', 'In parte: diverse mansioni si possono fare da remoto', 'Sì: si potrebbe ridurre una quota ampia di presenza', 'Molto: la presenza effettiva supera di molto quella necessaria'] },
+        I1: { name: 'Capacità sottoutilizzata', problem: 'mezzi con molti posti vuoti', title: 'Quanto viaggiano vuoti i mezzi che portano le persone in sede?', options: ['Quasi pieni: pochi posti liberi, poche auto con una sola persona', 'Qualche posto libero, ma poco', 'Occupazione media, o parecchie auto con una sola persona', 'Mezzi collettivi poco pieni, o molte auto con una sola persona', "Mezzi molto vuoti, o domina l'auto con una sola persona"] },
+        I2: { name: 'Duplicazione modale', problem: 'servizi che si sovrappongono', title: 'Navette, autobus e servizi di altre aziende si sovrappongono su percorsi e orari?', options: ['No, nessun servizio duplicato', 'Solo ogni tanto', 'In parte, su alcuni percorsi o fasce orarie', 'Sì, sovrapposizioni evidenti', 'Sì: più servizi non coordinati e poco pieni sugli stessi percorsi'] },
+        I3: { name: 'Mismatch temporale', problem: 'orari che non combaciano', title: 'Gli orari dei mezzi alternativi all\'auto sono compatibili con quelli di lavoro?', options: ['Sì, con quasi tutti gli orari', 'Sì, salvo alcune fasce', 'Solo in parte: turni o orari principali coperti a metà', 'Poco: molti ingressi e uscite restano scoperti', "No: i turni principali non hanno alternative all'auto"] },
+        I4: { name: "Frizione dell'ultimo miglio", problem: "un ultimo tratto scomodo o poco sicuro", title: "Dalla fermata alla sede, l'ultimo tratto è comodo e sicuro?", options: ['Sì: breve, sicuro e continuo', 'Quasi sempre, con piccole criticità', 'Si fa, ma è scomodo', 'È lungo, poco sicuro o interrotto', "Di fatto impedisce di arrivare senza auto"] },
+        I5: { name: 'Domanda evitabile', problem: 'viaggi che si potrebbero evitare', title: 'Le persone vengono in sede più di quanto il lavoro richieda?', options: ['No, la presenza è quasi sempre necessaria', 'Poco: poche mansioni si possono fare da remoto', 'In parte: diverse mansioni si possono fare da remoto', 'Sì: si potrebbe ridurre una quota ampia di presenza', 'Molto: la presenza effettiva supera di molto quella necessaria'] },
         estimate: 'Dai tuoi dati stimiamo una criticità {band}. Se la vedi diversamente, scegli un\'altra risposta.',
         estimateNone: 'Con i dati inseriti non possiamo stimarla: scegli la risposta che descrive meglio la sede.',
         reason: 'Cosa te la fa vedere diversamente? Facoltativo, ma ci aiuta molto.',
@@ -102,21 +102,27 @@ window.CCF_I18N = {
         hintI3: 'Ci hai detto che il trasporto pubblico copre gli orari così: «{a}». Lavora su turni il {c}% delle persone.'
       },
       ivSelect: {
-        title: 'Il framework ha selezionato {n} interventi per la tua sede.', titleOne: 'Il framework ha selezionato un intervento per la tua sede.',
-        sub: 'Correggono le inefficienze emerse. I principali sono già selezionati: aggiungi i complementari che vuoi valutare.',
-        none: 'Nessuna inefficienza raggiunge un livello medio: il framework non propone interventi. Puoi andare ai risultati.',
-        dataFirst: 'Prima di tutto va rafforzata la base dati: con i dati di oggi, gli interventi che richiedono origini e destinazioni, turni o accessibilità dei mezzi pubblici partono con un punteggio dati basso.',
+        eyebrow: 'Le proposte per la tua sede',
+        title: 'Ecco le azioni più adatte alla tua sede.', titleOne: 'Ecco l\'azione più adatta alla tua sede.',
+        sub: 'Correggono i problemi emersi. Quelle segnate sono già selezionate: tocca una proposta per aggiungerla o toglierla.',
+        moreIdeas: 'Altre {n} idee per questo problema', moreIdeasOne: 'Un\'altra idea per questo problema',
+        summary: '{k} proposte da valutare · circa {m} min', summaryOne: '1 proposta da valutare · circa 1 min', summaryNone: 'Nessuna proposta scelta: passi direttamente ai risultati.',
+        none: 'Nessun problema raggiunge un livello medio: il framework non propone interventi. Puoi andare ai risultati.',
+        dataFirst: 'Prima di tutto servono dati migliori: con quelli di oggi, le azioni che richiedono origini e destinazioni, turni o accessibilità dei mezzi pubblici partono con un punteggio dati basso.',
+        recommended: 'Consigliata', forProblem: 'Problema emerso: {problem}', level: 'criticità {band}',
+        benefit: '≈ −{t} t CO₂e l\'anno', benefitNone: 'Effetto da valutare con te', benefitZero: 'Nessuna riduzione stimata',
         primary: 'principale', complementary: 'complementare', treats: 'Corregge: {name}'
       },
       iv: {
-        eyebrow: 'Intervento {k} di {n} · corregge: {name}',
+        eyebrow: 'Proposta {k} di {n}', step: 'domanda {j} di {m}',
+        why: 'Perché te la proponiamo: {problem}.',
         reduction: 'Riduzione stimata', unit: "t CO₂e all'anno", pct: '{p}% delle emissioni attuali',
         negative: 'Con queste ipotesi non riduce le emissioni',
         reasons: {
-          not_modelled: 'Effetto non stimabile dai dati di una singola sede: indica tu l\'impatto qui sotto.',
+          not_modelled: 'Effetto non stimabile dai dati di una singola sede: lo valuti tu.',
           no_baseline: 'Completa distanze e mezzi per stimare la riduzione.',
           no_source: 'Non ci sono persone che arrivano in auto da sole.',
-          no_service: 'Non hai indicato una navetta aziendale: così com\'è, questo intervento non si applica.',
+          no_service: 'Non hai indicato una navetta aziendale: così com\'è, questa azione non si applica.',
           no_acr: 'Completa presenza e giorni in sede per stimare la domanda evitabile.'
         },
         lever: {
@@ -125,15 +131,34 @@ window.CCF_I18N = {
           avoid_acr: 'Ipotesi: si evita il {pct}% della domanda evitabile ({acr}% del totale)',
           avoid_total: 'Ipotesi: si evita il {pct}% dei km percorsi'
         },
-        qCost: 'Quanto costa realizzarlo?', cost: ['Quasi nulla', 'Poco', 'Abbastanza', 'Molto', 'Moltissimo'],
-        qAcc: 'Quanto sarebbe accettato in azienda?', acc: ['Forte opposizione', 'Resistenze prevedibili', 'Incerto', 'Buona accoglienza', 'Forte consenso'],
-        qData: 'Quanto sono solidi i dati per progettarlo e misurarlo?', data: ['Insufficienti', 'Deboli', 'Sufficienti ma incompleti', 'Buoni', 'Completi e aggiornati'],
+        q: {
+          impact: 'Quanto ridurrebbe le emissioni della sede?',
+          cost: 'Quanto costerebbe realizzarla?',
+          acc: 'Come la accoglierebbero in azienda?',
+          data: 'Hai i dati per progettarla e misurarne i risultati?'
+        },
+        qsub: {
+          impact: 'Dai dati di una sola sede il framework non riesce a stimarlo: qui serve la tua esperienza.',
+          cost: 'Pensa al costo complessivo per la tua organizzazione, tempo interno compreso.',
+          acc: 'Dipendenti, rappresentanze, direzione: pensa alla reazione più probabile.',
+          data: 'Per esempio origini e destinazioni, turni, orari dei mezzi pubblici.'
+        },
+        impact: ['Quasi nulla', 'Poca', 'Media', 'Alta', 'Molto alta'],
+        impactSub: ["meno dell'1%", 'tra 1% e 3%', 'tra 3% e 7%', 'tra 7% e 15%', 'oltre il 15%'],
+        cost: ['Quasi nullo', 'Basso', 'Medio', 'Alto', 'Molto alto'],
+        costSub: ['basta il tempo interno', 'rientra nel budget ordinario', 'serve un budget dedicato', 'investimento da approvare', 'investimento straordinario'],
+        acc: ['Forte opposizione', 'Resistenze prevedibili', 'Incerta', 'Buona accoglienza', 'Forte consenso'],
+        accSub: ['la bloccherebbero', 'servirà convincere', 'difficile prevederlo', 'i più sarebbero favorevoli', 'la chiedono già'],
+        data: ['Insufficienti', 'Deboli', 'Parziali', 'Buoni', 'Completi'],
+        dataSub: ['non sapremmo da dove partire', 'pochi o poco aggiornati', 'bastano per iniziare', 'bastano per progettare', 'anche per misurare i risultati'],
+        adjust: 'Controlla le stime del framework',
+        adjustNote: 'Riduzione delle emissioni e soggetti da coinvolgere sono già stimati. Cambiali solo se conosci meglio la situazione: la correzione viene registrata.',
         qGcs: 'Chi va coinvolto?', gcs: ['Solo il mio ufficio', 'Più funzioni interne', 'Fornitori esterni', 'Comune o trasporto pubblico', 'Più aziende ed enti insieme'],
-        qImpact: 'Impatto sulle emissioni', impact: ['Marginale', 'Limitato', 'Medio', 'Elevato', 'Molto elevato'],
+        qImpact: 'Impatto sulle emissioni',
         capped: 'Con i dati di oggi questo punteggio può arrivare al massimo a 2.',
         govPlan: 'Serve un piano di governance esplicito.',
-        pending: 'Rispondi alle tre domande per vedere la priorità.',
-        priority: 'Priorità {c}', ipi: 'indice {v}',
+        pending: 'Rispondi alle domande per vedere la priorità.',
+        priority: 'Priorità {c}', ipi: 'indice {v}', verdict: '{name}: priorità {c}',
         cls: { A: "Candidabile all'attuazione immediata", B: 'Da programmare, approfondire o testare', C: 'Da rimandare o subordinare a precondizioni' },
         presetGcs: 'proposto per questo tipo di intervento', presetImpact: 'stimato dalla riduzione di emissioni'
       },
@@ -186,6 +211,12 @@ window.CCF_I18N = {
       c1: { title: 'Nella tua sede ci sono inefficienze che queste cinque categorie non descrivono?', text: 'Quali?' },
       c2: { title: 'Hai notato problemi che ricadevano in più categorie insieme?', text: 'Quali?' },
       yes: 'Sì', no: 'No',
+      share: {
+        title: 'Vuoi dirci il tuo ruolo o preferisci restare anonimo?',
+        sub: 'Ci aiuta a leggere le valutazioni per profilo professionale. Chiediamo solo ruolo ed esperienza: nessun nome, nessun contatto.',
+        yes: 'Indico ruolo ed esperienza', yesSub: 'due domande veloci',
+        no: 'Preferisco restare anonimo', noSub: 'passi direttamente alla fine'
+      },
       role: { title: 'Qual è il tuo ruolo?', options: { mm_company: 'Mobility manager aziendale', mm_area: "Mobility manager d'area", hr: 'HR o welfare', esg: 'Sostenibilità / ESG', facility: 'Facility / operations', consultant: 'Consulente', other: 'Altro' } },
       experience: { title: 'Da quanto ti occupi di mobility management?', options: { lt1: 'Meno di 1 anno', y1_3: '1–3 anni', y3_5: '3–5 anni', gt5: 'Oltre 5 anni' } },
       final: {
@@ -201,7 +232,8 @@ window.CCF_I18N = {
         syncing: 'Invio delle risposte in corso… Se chiudi la pagina, l\'invio si completa alla prossima visita.', synced: '✓ Risposte salvate',
         code: 'Codice risposta: {code}', codeNote: "Conservalo se vorrai chiedere l'accesso o la cancellazione dei tuoi dati.",
         download: 'Scarica il report PDF', printHint: 'Nella finestra di stampa scegli «Salva come PDF».', newRun: 'Nuova analisi',
-        newConfirm: 'Vuoi iniziare una nuova analisi? Quella attuale verrà cancellata da questo browser.', home: 'Torna alla home'
+        newConfirm: 'Vuoi iniziare una nuova analisi? Quella attuale verrà cancellata da questo browser.', home: 'Torna alla home',
+        authorsTitle: 'Chi firma la ricerca', paperLine: 'Il framework è descritto nell\'articolo di ricerca «{title}».'
       }
     },
 
@@ -242,6 +274,27 @@ window.CCF_I18N = {
       i5_redistribute: 'Redistribuzione dei giorni di presenza per evitare concentrazioni'
     },
 
+    // Nomi e descrizioni in parole semplici, mostrati durante la compilazione. I nomi della Tab. 1 restano nei risultati.
+    ivPlain: {
+      i1_lf: { name: 'Riempire i mezzi collettivi che già ci sono', what: 'Promuovere navette e autobus già attivi perché viaggino con più persone a bordo.' },
+      i1_carpool: { name: 'Auto condivisa tra colleghi', what: 'Mettere in contatto chi fa lo stesso tragitto, con un\'app, posti auto riservati o piccoli incentivi.' },
+      i1_rightsize: { name: 'Navette della misura giusta', what: 'Accorpare le corse poco usate e usare veicoli adatti al numero reale di passeggeri.' },
+      i1_ptdeal: { name: 'Accordo con il trasporto pubblico', what: 'Concordare con l\'operatore abbonamenti o corse per riempire le linee che servono la sede.' },
+      i2_coord: { name: 'Navetta e mezzi pubblici coordinati', what: 'Evitare che la navetta ripeta il percorso di bus e treni, integrando orari e fermate.' },
+      i2_convert: { name: 'Navetta dove i mezzi pubblici non arrivano', what: 'Spostare il servizio aziendale verso le zone che oggi non hanno alternative.' },
+      i2_coalition: { name: 'Fare rete con le organizzazioni vicine', what: 'Condividere navette e servizi con altre aziende ed enti della stessa area.' },
+      i3_align: { name: 'Orari allineati ai mezzi pubblici', what: 'Adattare ingressi e uscite alle corse di bus e treni che servono la sede.' },
+      i3_ondemand: { name: 'Servizi a chiamata negli orari scoperti', what: 'Navette o taxi collettivi prenotabili quando i mezzi pubblici non passano.' },
+      i3_stagger: { name: 'Turni scaglionati', what: 'Distribuire ingressi e uscite per evitare picchi e mezzi pieni solo in certe ore.' },
+      i4_equip: { name: 'Servizi in sede per chi va a piedi o in bici', what: 'Rastrelliere sicure, docce, spogliatoi e armadietti.' },
+      i4_route: { name: 'Un percorso sicuro fino alla sede', what: 'Marciapiedi, attraversamenti, illuminazione e ciclabili nell\'ultimo tratto, insieme al Comune.' },
+      i4_feeder: { name: 'Navetta dalla stazione', what: 'Un collegamento dalla stazione o dal nodo di interscambio fino all\'ingresso della sede.' },
+      i4_micro: { name: 'Bici e monopattini condivisi', what: 'Mezzi in sharing per coprire l\'ultimo chilometro.' },
+      i5_remote: { name: 'Più lavoro da remoto, dove si può', what: 'Estendere il lavoro da remoto alle mansioni che non richiedono la presenza.' },
+      i5_cowork: { name: 'Coworking vicino a casa', what: 'Spazi di lavoro di prossimità che accorciano i viaggi più lunghi.' },
+      i5_redistribute: { name: 'Giorni in sede distribuiti meglio', what: 'Evitare che tutti vengano negli stessi giorni, riducendo picchi e spazi vuoti.' }
+    },
+
     help: {
       intro: { title: 'Come funziona', body: ['Domande brevi, una alla volta. Puoi tornare indietro quando vuoi e le risposte restano salvate in questo browser.', 'Nessun dato parte prima del tuo consenso. Il nome dell\'organizzazione non viene mai inviato.'], fw: "La beta segue l'articolo di ricerca: otto blocchi del Canvas, dalla maturità dei dati al piano di interventi, con indicatori espressi in kWh e CO₂e per passeggero-km." },
       chapter: { body: ['Ogni capitolo corrisponde a un blocco del Circular Commuting Canvas. Le curiosità vengono dalla letteratura citata nell\'articolo.'] },
@@ -256,6 +309,10 @@ window.CCF_I18N = {
         9: "Criterio di validazione «utilità decisionale percepita»: si verifica se la diagnosi è comprensibile, se il legame tra inefficienze e interventi è plausibile e se l'ordine aiuta a scegliere le priorità."
       },
       sample: { title: 'Perché te lo chiediamo', body: ['Serve a descrivere il campione dello studio. I risultati vengono analizzati solo in forma aggregata, mai per singola organizzazione.'] },
+      region: { title: 'La regione della sede', body: ['Serve a leggere i risultati per territorio: da sola non identifica la sede.', 'Tocca la regione sulla mappa o sceglila dall\'elenco. Se la sede è all\'estero, scegli «Fuori Italia».'], fw: 'Confini regionali: ISTAT, elaborazione openpolis/geojson-italy, licenza CC BY 4.0.' },
+      share: { title: 'Ruolo e anonimato', body: ['Puoi restare del tutto anonimo: la tua valutazione conta allo stesso modo.', 'Se indichi ruolo ed esperienza, potremo capire se lo strumento serve in modo diverso a profili diversi.'] },
+      contact: { title: 'Altri dubbi?', text: 'Scrivi a {name}, primo autore dello studio e curatore dello strumento.' },
+      authorsTitle: 'Chi firma la ricerca',
       employees: { title: 'Perché una sola sede', body: ['Il framework lavora sede per sede: il numero di persone serve a controllare la ripartizione per mezzo e a descrivere il campione.'] },
       shifts: { title: 'Perché i turni contano', body: ['Un servizio pubblico ottimo alle 9 può non esistere alle 6. I turni cambiano la compatibilità degli orari.'], fw: "Alimenta la lettura del mismatch temporale (I3). Se nessuno lavora su turni, la domanda sui turni scoperti viene saltata e conteggiata come non applicabile." },
       pscl: { title: 'Il PSCL', body: ['Il Piano degli spostamenti casa-lavoro è previsto dal D.I. 179/2021 per le organizzazioni con più di 100 dipendenti in una sede situata in un capoluogo o in un comune con più di 50.000 abitanti.', 'Il report finale è pensato anche per alimentarlo.'] },
@@ -272,8 +329,8 @@ window.CCF_I18N = {
       I3: { title: 'Mismatch temporale', body: ["Una linea eccellente alle 9 non serve a chi entra alle 6. Pensa ai turni principali e agli orari d'uscita."], fw: 'I3, a valutazione diretta. Indicatore di monitoraggio: copertura temporale. Interventi coerenti: allineare gli orari alle finestre del trasporto pubblico, servizi a chiamata (Tab. 1).' },
       I4: { title: "Frizione dell'ultimo miglio", body: ["Una fermata vicina non basta se il percorso fino all'ingresso è lungo, buio o interrotto."], fw: 'I4. Stima = 100 − ACC. Interventi coerenti: dotazioni per la mobilità attiva e messa in sicurezza del percorso (Tab. 1).' },
       I5: { title: 'Domanda evitabile', body: ['Non è una domanda sullo smart working in generale: conta quanta presenza supera quella che il lavoro richiede.'], fw: 'I5. Stima = 100 − MNS; se l\'MNS è sotto 50 e si viene in sede 4 o più giorni a settimana, almeno «alta». Indicatore: commuting evitato (eq. 7).' },
-      ivSelect: { title: 'Perché questi interventi', body: ['Il framework non suggerisce misure generiche: propone solo quelle che agiscono sulla causa delle inefficienze emerse.'], fw: 'Candidati = interventi della matrice inefficienza-intervento (Tab. 1) collegati a inefficienze con punteggio ≥ 41. I principali agiscono sulla causa, i complementari rafforzano l\'effetto.' },
-      iv: { title: 'Valutare un intervento', body: ['Tre valutazioni rapide: costo, accettazione e dati. Riduzione di emissioni e complessità di governance sono già stimate, ma puoi correggerle.'], fw: "ΔG = passeggeri-km trasferiti o evitati × differenziale emissivo (eq. 6), tradotto in impatto da 1 a 5 per fasce di riduzione: < 1%, 1–3%, 3–7%, 7–15%, ≥ 15%. IPI = (Impatto × Dati × Accettabilità) / (Costo × GCS) (eq. 8)." },
+      ivSelect: { title: 'Perché queste proposte', body: ['Non suggeriamo misure generiche: solo azioni che agiscono sulla causa dei problemi emersi.', 'Ne abbiamo già scelte alcune, così la valutazione resta breve. Puoi aggiungerne o toglierne quante vuoi.'], fw: 'Candidati = interventi della matrice inefficienza-intervento (Tab. 1) collegati a inefficienze con punteggio ≥ 41. I principali agiscono sulla causa, i complementari rafforzano l\'effetto. Preselezione: fino a tre interventi principali, dalle inefficienze più gravi.' },
+      iv: { title: 'Valutare una proposta', body: ['Tre domande veloci: costo, accoglienza in azienda e dati disponibili.', 'Riduzione delle emissioni e soggetti da coinvolgere li stima il framework: puoi controllarli in «Controlla le stime del framework».'], fw: "Intervento «{formal}» (Tab. 1), {role} per l'inefficienza {code}. ΔG = passeggeri-km trasferiti o evitati × differenziale emissivo (eq. 6), tradotto in impatto da 1 a 5 per fasce di riduzione: < 1%, 1–3%, 3–7%, 7–15%, ≥ 15%. IPI = (Impatto × Dati × Accettabilità) / (Costo × GCS) (eq. 8)." },
       results: { title: "Leggere l'ottagono", body: ['Otto dimensioni su una scala da 0 a 100, dove un valore più alto indica più criticità. Sotto trovi le inefficienze una per una e il piano di intervento.'], fw: 'Assi: I1–I5 (Inefficiency Layer); intensità emissiva = CI rispetto a un\'auto termica con una sola persona (203 g CO₂e/pax-km); dati mancanti = (5 − DMS effettivo) × 20; complessità attuativa = GCS medio degli interventi valutati, riportato su 0–100.' },
       truth: { title: 'Perché queste frasi', body: ["Rispondi d'istinto: non ci sono risposte giuste. Ci interessa quanto lo strumento ti è servito davvero."], fw: "Criterio di validazione «utilità decisionale percepita»: comprensibilità della diagnosi, plausibilità del legame inefficienze–interventi, utilità dell'ordine di priorità." },
       c1: { title: 'Completezza', body: ['Ci aiuta a capire se le cinque categorie bastano a descrivere i problemi reali.'], fw: 'Criterio «completezza diagnostica»: la tassonomia deve classificare le inefficienze osservate senza lasciare residui non attribuibili.' },
@@ -287,7 +344,7 @@ window.CCF_I18N = {
       title: 'Informativa privacy',
       sections: [
         ['Chi tratta i dati', 'Enrico Emanuele Corazzini, che cura questo sito e la raccolta dei dati per conto degli autori dello studio indicati in questa pagina. Per qualunque richiesta usa il modulo in fondo a questa informativa.'],
-        ['Quali dati raccogliamo', "Le risposte al Canvas (dati aggregati della sede: tipo e settore dell'organizzazione, numero di dipendenti, regione, ripartizione per mezzo, punteggi), i risultati calcolati, le eventuali correzioni con la loro motivazione, le risposte alla valutazione finale e dati tecnici minimi (lingua, versione dello strumento, tempi di compilazione). Non raccogliamo il nome dell'organizzazione o della sede, che restano nel tuo browser, né dati sui singoli dipendenti, né il tuo indirizzo IP. Non usiamo cookie."],
+        ['Quali dati raccogliamo', "Le risposte al Canvas (dati aggregati della sede: tipo e settore dell'organizzazione, numero di dipendenti, regione, ripartizione per mezzo, punteggi), i risultati calcolati, le eventuali correzioni con la loro motivazione, le risposte alla valutazione finale, ruolo ed esperienza solo se scegli di indicarli, e dati tecnici minimi (lingua, versione dello strumento, tipo di dispositivo, tempi di compilazione). Non raccogliamo il nome dell'organizzazione o della sede, che restano nel tuo browser, né dati sui singoli dipendenti, né il tuo indirizzo IP. Non usiamo cookie."],
         ['Email facoltativa', 'Solo se scegli di essere ricontattato. È salvata separatamente, senza collegamento alle risposte, e cancellata al termine del progetto.'],
         ['Perché', 'Per la validazione scientifica del framework e per analisi statistiche. I risultati sono pubblicati solo in forma aggregata, senza possibilità di risalire alle singole organizzazioni.'],
         ['Base giuridica', 'Il tuo consenso (art. 6, par. 1, lett. a GDPR), che puoi revocare in ogni momento senza pregiudicare il trattamento già effettuato.'],
@@ -310,9 +367,9 @@ window.CCF_I18N = {
     },
     ui: {
       back: 'Back', next: 'Next', start: 'Start the assessment', startChapter: 'Start', skip: 'Skip',
-      dontKnow: "I don't know", saved: 'Saved in your browser', chapterOf: 'Chapter {n} of {t}',
+      dontKnow: "I don't know", saved: 'Saved in your browser', moreHelp: 'Any questions?', chapterOf: 'Chapter {n} of {t}',
       helpAria: 'What is on this screen?', helpEyebrow: 'What you are looking at', helpFw: 'In the framework', close: 'Close',
-      factLabel: 'Did you know?', chapterMeta: '{n} questions · about {m} min', keysHint: 'You can answer with the number keys and continue with Enter.',
+      factLabel: 'Did you know?', chapterMeta: '{n} questions · about {m} min', keysHint: 'You can answer with the number keys and continue with Enter.', keysHelp: "Keyboard: numbers pick the answer, Enter moves on, 0 means “I don't know”.",
       estimateTag: 'Estimated from your data', presetTag: 'Suggested', optional: 'optional',
       restart: 'Start over', restartConfirm: 'Delete the assessment saved in this browser and start over?',
       resumeTitle: 'Welcome back', resumeText: 'You have an assessment in progress in this browser, at the “{chapter}” chapter.', resumeBtn: 'Resume',
@@ -326,7 +383,7 @@ window.CCF_I18N = {
       4: { title: 'Alternatives to the car', desc: 'Seven questions on stops, timetables and routes around the site.' },
       5: { title: 'The role of the car', desc: 'Five questions on how structural car use is.' },
       6: { title: 'Where waste arises', desc: 'Five possible inefficiencies. For three of them we suggest an estimate from your data: correct it if you disagree.' },
-      7: { title: 'What to do, in what order', desc: 'The framework only proposes interventions that correct the inefficiencies found. For each one, three quick ratings.' },
+      7: { title: 'What to do, in what order', desc: 'We only propose actions that correct the problems found. For each one, three quick questions: cost, acceptance and data.' },
       9: { title: 'Your evaluation', desc: 'Six statements, one at a time: tell us how true they are. This is the part that validates the framework.' }
     },
 
@@ -357,7 +414,7 @@ window.CCF_I18N = {
       orgType: { title: 'What type of organisation is yours?' },
       sector: { title: 'Which sector does it work in?' },
       employees: { title: 'How many people work at the site?', sub: 'If your organisation has several sites, pick one: the framework works site by site.' },
-      region: { title: 'Which Italian region is the site in?', groups: ['North', 'Centre', 'South and islands'], abroad: 'Outside Italy' },
+      region: { title: 'Which Italian region is the site in?', sub: 'Tap the region on the map or pick it from the list.', groups: ['North', 'Centre', 'South and islands'], abroad: 'Outside Italy', mapAria: 'Map of the Italian regions', mapHint: 'Tap a region', listTitle: 'Or from the list', attribution: 'Boundaries: ISTAT, processed by openpolis (CC BY 4.0)' },
       shifts: { title: 'How many people work shifts?', sub: 'An estimate is fine.' },
       pscl: { title: 'Do you have a commuting plan?', sub: 'The Italian PSCL.' },
       dms: { title: 'What data do you have today on employee commuting?', sub: 'Pick the highest level that truly describes you.' },
@@ -390,11 +447,11 @@ window.CCF_I18N = {
         { icon: 'lastMile', title: 'Do people leaving public transport have options for the last stretch?', options: ['None', 'Very inconvenient or unsafe', 'Partial', 'Available but improvable', 'Yes, effective'] }
       ],
       ineff: {
-        I1: { name: 'Underutilised capacity', title: 'How empty are the vehicles bringing people to the site?', options: ['Nearly full: few free seats, few cars with one person', 'Some free seats, but not many', 'Average occupancy, or quite a few cars with one person', 'Collective services under-used, or many cars with one person', 'Very empty vehicles, or driving alone dominates'] },
-        I2: { name: 'Modal duplication', title: 'Do shuttles, buses and other companies\' services overlap on routes and times?', options: ['No, no duplicated services', 'Only occasionally', 'Partly, on some routes or time slots', 'Yes, clear overlaps', 'Yes: several uncoordinated, half-empty services on the same routes'] },
-        I3: { name: 'Temporal mismatch', title: 'Are the timetables of alternatives to the car compatible with working hours?', options: ['Yes, with almost all schedules', 'Yes, except some time slots', 'Only partly: main shifts or schedules half covered', 'Poorly: many start and end times uncovered', 'No: main shifts have no alternative to the car'] },
-        I4: { name: 'Last-mile friction', title: 'From the stop to the site, is the last stretch convenient and safe?', options: ['Yes: short, safe and continuous', 'Almost always, with minor issues', 'Doable, but inconvenient', 'Long, unsafe or interrupted', 'It effectively prevents arriving without a car'] },
-        I5: { name: 'Avoidable demand', title: 'Do people come to the site more than their work requires?', options: ['No, presence is almost always needed', 'A little: few tasks can be done remotely', 'Partly: several tasks can be done remotely', 'Yes: a large share of presence could be reduced', 'Very much: actual presence far exceeds what is needed'] },
+        I1: { name: 'Underutilised capacity', problem: 'vehicles with many empty seats', title: 'How empty are the vehicles bringing people to the site?', options: ['Nearly full: few free seats, few cars with one person', 'Some free seats, but not many', 'Average occupancy, or quite a few cars with one person', 'Collective services under-used, or many cars with one person', 'Very empty vehicles, or driving alone dominates'] },
+        I2: { name: 'Modal duplication', problem: 'services that overlap', title: 'Do shuttles, buses and other companies\' services overlap on routes and times?', options: ['No, no duplicated services', 'Only occasionally', 'Partly, on some routes or time slots', 'Yes, clear overlaps', 'Yes: several uncoordinated, half-empty services on the same routes'] },
+        I3: { name: 'Temporal mismatch', problem: 'timetables that do not match', title: 'Are the timetables of alternatives to the car compatible with working hours?', options: ['Yes, with almost all schedules', 'Yes, except some time slots', 'Only partly: main shifts or schedules half covered', 'Poorly: many start and end times uncovered', 'No: main shifts have no alternative to the car'] },
+        I4: { name: 'Last-mile friction', problem: 'an awkward or unsafe last stretch', title: 'From the stop to the site, is the last stretch convenient and safe?', options: ['Yes: short, safe and continuous', 'Almost always, with minor issues', 'Doable, but inconvenient', 'Long, unsafe or interrupted', 'It effectively prevents arriving without a car'] },
+        I5: { name: 'Avoidable demand', problem: 'trips that could be avoided', title: 'Do people come to the site more than their work requires?', options: ['No, presence is almost always needed', 'A little: few tasks can be done remotely', 'Partly: several tasks can be done remotely', 'Yes: a large share of presence could be reduced', 'Very much: actual presence far exceeds what is needed'] },
         estimate: 'From your data we estimate {band} criticality. If you see it differently, pick another answer.',
         estimateNone: 'We cannot estimate it from the data entered: pick the answer that best describes the site.',
         reason: 'What makes you see it differently? Optional, but very helpful.',
@@ -404,21 +461,27 @@ window.CCF_I18N = {
         hintI3: 'You told us public transport covers working hours like this: “{a}”. {c}% of people work shifts.'
       },
       ivSelect: {
-        title: 'The framework selected {n} interventions for your site.', titleOne: 'The framework selected one intervention for your site.',
-        sub: 'They correct the inefficiencies found. The primary ones are already selected: add the complementary ones you want to evaluate.',
-        none: 'No inefficiency reaches a medium level: the framework proposes no interventions. You can go to the results.',
-        dataFirst: 'First, the evidence base needs strengthening: with today\'s data, interventions requiring origins and destinations, shift structures or public transport accessibility start with a low data score.',
+        eyebrow: 'Proposals for your site',
+        title: 'Here are the actions best suited to your site.', titleOne: 'Here is the action best suited to your site.',
+        sub: 'They correct the problems found. The ticked ones are already selected: tap a proposal to add or remove it.',
+        moreIdeas: '{n} more ideas for this problem', moreIdeasOne: 'One more idea for this problem',
+        summary: '{k} proposals to rate · about {m} min', summaryOne: '1 proposal to rate · about 1 min', summaryNone: 'No proposal selected: you go straight to the results.',
+        none: 'No problem reaches a medium level: the framework proposes no interventions. You can go to the results.',
+        dataFirst: 'First, better data are needed: with today\'s data, actions requiring origins and destinations, shift structures or public transport accessibility start with a low data score.',
+        recommended: 'Recommended', forProblem: 'Problem found: {problem}', level: '{band} criticality',
+        benefit: '≈ −{t} t CO₂e a year', benefitNone: 'Effect to be rated with you', benefitZero: 'No estimated reduction',
         primary: 'primary', complementary: 'complementary', treats: 'Corrects: {name}'
       },
       iv: {
-        eyebrow: 'Intervention {k} of {n} · corrects: {name}',
+        eyebrow: 'Proposal {k} of {n}', step: 'question {j} of {m}',
+        why: 'Why we propose it: {problem}.',
         reduction: 'Estimated reduction', unit: 't CO₂e a year', pct: '{p}% of current emissions',
         negative: 'With these assumptions it does not reduce emissions',
         reasons: {
-          not_modelled: 'Effect not estimable from single-site data: set the impact below.',
+          not_modelled: 'Effect not estimable from single-site data: you rate it.',
           no_baseline: 'Complete distances and modes to estimate the reduction.',
           no_source: 'Nobody drives alone to the site.',
-          no_service: 'You did not mention a company shuttle: as it stands, this intervention does not apply.',
+          no_service: 'You did not mention a company shuttle: as it stands, this action does not apply.',
           no_acr: 'Complete presence and days on site to estimate avoidable demand.'
         },
         lever: {
@@ -427,15 +490,34 @@ window.CCF_I18N = {
           avoid_acr: 'Assumption: {pct}% of avoidable demand is avoided ({acr}% of the total)',
           avoid_total: 'Assumption: {pct}% of kilometres travelled are avoided'
         },
-        qCost: 'How much does it cost?', cost: ['Next to nothing', 'Little', 'Some', 'A lot', 'Very much'],
-        qAcc: 'How well would it be accepted internally?', acc: ['Strong opposition', 'Expected resistance', 'Uncertain', 'Well received', 'Strong support'],
-        qData: 'How solid are the data to design and measure it?', data: ['Insufficient', 'Weak', 'Sufficient but incomplete', 'Good', 'Complete and up to date'],
+        q: {
+          impact: 'How much would it cut the site\'s emissions?',
+          cost: 'How much would it cost to implement?',
+          acc: 'How would people in your organisation receive it?',
+          data: 'Do you have the data to design it and measure its results?'
+        },
+        qsub: {
+          impact: 'The framework cannot estimate it from single-site data: your experience is needed here.',
+          cost: 'Think of the overall cost for your organisation, internal time included.',
+          acc: 'Employees, worker representatives, management: think of the most likely reaction.',
+          data: 'For example origins and destinations, shifts, public transport timetables.'
+        },
+        impact: ['Almost none', 'Small', 'Medium', 'Large', 'Very large'],
+        impactSub: ['less than 1%', 'between 1% and 3%', 'between 3% and 7%', 'between 7% and 15%', 'more than 15%'],
+        cost: ['Next to nothing', 'Low', 'Medium', 'High', 'Very high'],
+        costSub: ['internal time is enough', 'fits the ordinary budget', 'needs a dedicated budget', 'investment needing approval', 'extraordinary investment'],
+        acc: ['Strong opposition', 'Expected resistance', 'Uncertain', 'Well received', 'Strong support'],
+        accSub: ['they would block it', 'people will need convincing', 'hard to predict', 'most would be in favour', 'they already ask for it'],
+        data: ['Insufficient', 'Weak', 'Partial', 'Good', 'Complete'],
+        dataSub: ['we would not know where to start', 'few or outdated', 'enough to get started', 'enough to design it', 'enough to measure results too'],
+        adjust: "Check the framework's estimates",
+        adjustNote: 'Emission reduction and who needs to be involved are already estimated. Change them only if you know the situation better: the correction is recorded.',
         qGcs: 'Who needs to be involved?', gcs: ['Just my office', 'Several internal functions', 'External suppliers', 'Municipality or public transport', 'Several companies and bodies together'],
-        qImpact: 'Emission impact', impact: ['Marginal', 'Limited', 'Medium', 'High', 'Very high'],
+        qImpact: 'Emission impact',
         capped: 'With today\'s data this score can be 2 at most.',
         govPlan: 'An explicit governance plan is required.',
-        pending: 'Answer the three questions to see the priority.',
-        priority: 'Priority {c}', ipi: 'index {v}',
+        pending: 'Answer the questions to see the priority.',
+        priority: 'Priority {c}', ipi: 'index {v}', verdict: '{name}: priority {c}',
         cls: { A: 'Ready for immediate implementation', B: 'To be scheduled, investigated or piloted', C: 'To be postponed or made conditional on prerequisites' },
         presetGcs: 'suggested for this type of intervention', presetImpact: 'estimated from the emission reduction'
       },
@@ -488,6 +570,12 @@ window.CCF_I18N = {
       c1: { title: 'Are there inefficiencies at your site that these five categories do not describe?', text: 'Which ones?' },
       c2: { title: 'Did you notice problems that fell into more than one category at once?', text: 'Which ones?' },
       yes: 'Yes', no: 'No',
+      share: {
+        title: 'Would you like to tell us your role or stay anonymous?',
+        sub: 'It helps us read the evaluations by professional profile. We only ask role and experience: no name, no contact.',
+        yes: 'I will share role and experience', yesSub: 'two quick questions',
+        no: 'I prefer to stay anonymous', noSub: 'you go straight to the end'
+      },
       role: { title: 'What is your role?', options: { mm_company: 'Company mobility manager', mm_area: 'Area mobility manager', hr: 'HR or welfare', esg: 'Sustainability / ESG', facility: 'Facility / operations', consultant: 'Consultant', other: 'Other' } },
       experience: { title: 'How long have you worked in mobility management?', options: { lt1: 'Less than 1 year', y1_3: '1–3 years', y3_5: '3–5 years', gt5: 'More than 5 years' } },
       final: {
@@ -503,7 +591,8 @@ window.CCF_I18N = {
         syncing: 'Sending your answers… If you close the page, sending completes on your next visit.', synced: '✓ Answers saved',
         code: 'Response code: {code}', codeNote: 'Keep it if you want to request access to or deletion of your data.',
         download: 'Download the PDF report', printHint: 'In the print dialog choose “Save as PDF”.', newRun: 'New assessment',
-        newConfirm: 'Start a new assessment? The current one will be deleted from this browser.', home: 'Back to home'
+        newConfirm: 'Start a new assessment? The current one will be deleted from this browser.', home: 'Back to home',
+        authorsTitle: 'Who is behind the research', paperLine: 'The framework is described in the research article “{title}”.'
       }
     },
 
@@ -544,6 +633,26 @@ window.CCF_I18N = {
       i5_redistribute: 'Redistribute attendance days to avoid concentrated flows'
     },
 
+    ivPlain: {
+      i1_lf: { name: 'Fill the collective services you already have', what: 'Promote existing shuttles and buses so they run with more people on board.' },
+      i1_carpool: { name: 'Car sharing among colleagues', what: 'Connect people travelling the same route, with an app, reserved parking or small incentives.' },
+      i1_rightsize: { name: 'Right-sized shuttles', what: 'Merge little-used runs and use vehicles that match the real number of passengers.' },
+      i1_ptdeal: { name: 'Agreement with public transport', what: 'Agree passes or runs with the operator to fill the lines serving the site.' },
+      i2_coord: { name: 'Coordinated shuttle and public transport', what: 'Stop the shuttle from repeating bus and train routes by integrating timetables and stops.' },
+      i2_convert: { name: 'Shuttle where public transport does not go', what: 'Move the company service to areas that have no alternatives today.' },
+      i2_coalition: { name: 'Team up with nearby organisations', what: 'Share shuttles and services with other companies and bodies in the same area.' },
+      i3_align: { name: 'Working hours aligned with public transport', what: 'Adapt arrival and departure times to the buses and trains serving the site.' },
+      i3_ondemand: { name: 'On-demand services for uncovered hours', what: 'Bookable shuttles or shared taxis when public transport does not run.' },
+      i3_stagger: { name: 'Staggered shifts', what: 'Spread arrivals and departures to avoid peaks and vehicles full only at certain hours.' },
+      i4_equip: { name: 'On-site facilities for walking and cycling', what: 'Secure bike racks, showers, changing rooms and lockers.' },
+      i4_route: { name: 'A safe route to the site', what: 'Pavements, crossings, lighting and cycle lanes on the last stretch, together with the municipality.' },
+      i4_feeder: { name: 'Shuttle from the station', what: 'A link from the station or interchange to the entrance of the site.' },
+      i4_micro: { name: 'Shared bikes and scooters', what: 'Sharing services to cover the last kilometre.' },
+      i5_remote: { name: 'More remote work, where possible', what: 'Extend remote work to tasks that do not require presence.' },
+      i5_cowork: { name: 'Coworking close to home', what: 'Local workspaces that shorten the longest commutes.' },
+      i5_redistribute: { name: 'Better spread of office days', what: 'Avoid everyone coming in on the same days, reducing peaks and empty spaces.' }
+    },
+
     help: {
       intro: { title: 'How it works', body: ['Short questions, one at a time. You can go back whenever you want and your answers stay saved in this browser.', "No data is sent before you consent. Your organisation's name is never sent."], fw: 'The beta follows the research article: eight Canvas blocks, from data maturity to the intervention plan, with indicators expressed in kWh and CO₂e per passenger-km.' },
       chapter: { body: ['Each chapter matches a block of the Circular Commuting Canvas. The facts come from the literature cited in the article.'] },
@@ -558,6 +667,10 @@ window.CCF_I18N = {
         9: 'Validation criterion “perceived decision-making usefulness”: whether the diagnosis is understandable, the inefficiency–intervention link plausible and the ranking helpful for choosing priorities.'
       },
       sample: { title: 'Why we ask', body: ['It describes the study sample. Results are analysed only in aggregate form, never by individual organisation.'] },
+      region: { title: 'The region of the site', body: ['It lets us read results by area: on its own it does not identify the site.', 'Tap the region on the map or pick it from the list. If the site is abroad, choose “Outside Italy”.'], fw: 'Regional boundaries: ISTAT, processed by openpolis/geojson-italy, CC BY 4.0 licence.' },
+      share: { title: 'Role and anonymity', body: ['You can stay completely anonymous: your evaluation counts just the same.', 'If you share role and experience, we can see whether the tool helps different profiles in different ways.'] },
+      contact: { title: 'Any other questions?', text: 'Write to {name}, first author of the study and curator of the tool.' },
+      authorsTitle: 'Who is behind the research',
       employees: { title: 'Why one site', body: ['The framework works site by site: headcount is used to check the split by mode and to describe the sample.'] },
       shifts: { title: 'Why shifts matter', body: ['A great public service at 9 am may not exist at 6 am. Shifts change timetable compatibility.'], fw: 'Feeds the reading of temporal mismatch (I3). If nobody works shifts, the question on uncovered shifts is skipped and counted as not applicable.' },
       pscl: { title: 'The commuting plan', body: ['In Italy the commuting plan (PSCL) is required by Decree 179/2021 for organisations with more than 100 employees at a site in a provincial capital or a municipality with over 50,000 inhabitants.', 'The final report is designed to feed into it.'] },
@@ -574,8 +687,8 @@ window.CCF_I18N = {
       I3: { title: 'Temporal mismatch', body: ['A great line at 9 am is no use to someone starting at 6 am. Think about the main shifts and end times.'], fw: 'I3, direct assessment. Monitoring indicator: time coverage. Consistent interventions: align schedules with public transport windows, on-call services (Table 1).' },
       I4: { title: 'Last-mile friction', body: ['A nearby stop is not enough if the way to the entrance is long, dark or interrupted.'], fw: 'I4. Estimate = 100 − ACC. Consistent interventions: active mobility facilities and a safe access route (Table 1).' },
       I5: { title: 'Avoidable demand', body: ['This is not about remote working in general: what counts is how much presence exceeds what the work requires.'], fw: 'I5. Estimate = 100 − MNS; if MNS is below 50 and people come in 4 or more days a week, at least “high”. Indicator: avoided commuting (eq. 7).' },
-      ivSelect: { title: 'Why these interventions', body: ['The framework does not suggest generic measures: it only proposes those acting on the cause of the inefficiencies found.'], fw: 'Candidates = interventions in the inefficiency-intervention matrix (Table 1) linked to inefficiencies scoring ≥ 41. Primary ones act on the cause, complementary ones reinforce the effect.' },
-      iv: { title: 'Rating an intervention', body: ['Three quick ratings: cost, acceptance and data. Emission reduction and governance complexity are already estimated, but you can correct them.'], fw: 'ΔG = passenger-km shifted or avoided × emission differential (eq. 6), turned into impact 1–5 by reduction bands: < 1%, 1–3%, 3–7%, 7–15%, ≥ 15%. IPI = (Impact × Data × Acceptability) / (Cost × GCS) (eq. 8).' },
+      ivSelect: { title: 'Why these proposals', body: ['We do not suggest generic measures: only actions acting on the cause of the problems found.', 'We have already picked some, so rating stays short. You can add or remove as many as you like.'], fw: 'Candidates = interventions in the inefficiency-intervention matrix (Table 1) linked to inefficiencies scoring ≥ 41. Primary ones act on the cause, complementary ones reinforce the effect. Preselection: up to three primary interventions, from the most severe inefficiencies.' },
+      iv: { title: 'Rating a proposal', body: ['Three quick questions: cost, acceptance in your organisation and available data.', "The framework estimates the emission reduction and who needs to be involved: you can check them under “Check the framework's estimates”."], fw: 'Intervention “{formal}” (Table 1), {role} for inefficiency {code}. ΔG = passenger-km shifted or avoided × emission differential (eq. 6), turned into impact 1–5 by reduction bands: < 1%, 1–3%, 3–7%, 7–15%, ≥ 15%. IPI = (Impact × Data × Acceptability) / (Cost × GCS) (eq. 8).' },
       results: { title: 'Reading the octagon', body: ['Eight dimensions on a 0 to 100 scale, where a higher value means more criticality. Below you find the inefficiencies one by one and the intervention plan.'], fw: 'Axes: I1–I5 (Inefficiency Layer); emission intensity = CI relative to a petrol/diesel car with one person (203 g CO₂e/pax-km); missing data = (5 − effective DMS) × 20; implementation complexity = mean GCS of the interventions rated, rescaled to 0–100.' },
       truth: { title: 'Why these statements', body: ['Answer on instinct: there are no right answers. We want to know how useful the tool really was.'], fw: 'Validation criterion “perceived decision-making usefulness”: understandability of the diagnosis, plausibility of the inefficiency–intervention link, usefulness of the priority order.' },
       c1: { title: 'Completeness', body: ['It helps us understand whether five categories are enough to describe real problems.'], fw: 'Criterion “diagnostic completeness”: the taxonomy must classify observed inefficiencies without unattributable residues.' },
@@ -589,7 +702,7 @@ window.CCF_I18N = {
       title: 'Privacy notice',
       sections: [
         ['Who processes the data', 'Enrico Emanuele Corazzini, who runs this website and the data collection on behalf of the authors of the study listed on this page. For any request, use the form at the end of this notice.'],
-        ['What data we collect', 'Your answers to the Canvas (aggregate site data: type and sector of the organisation, number of employees, region, split by mode, scores), the computed results, any corrections with their reasons, your answers to the final evaluation and minimal technical data (language, tool version, completion times). We do not collect the name of the organisation or site, which stay in your browser, data on individual employees, or your IP address. We do not use cookies.'],
+        ['What data we collect', 'Your answers to the Canvas (aggregate site data: type and sector of the organisation, number of employees, region, split by mode, scores), the computed results, any corrections with their reasons, your answers to the final evaluation, role and experience only if you choose to share them, and minimal technical data (language, tool version, device type, completion times). We do not collect the name of the organisation or site, which stay in your browser, data on individual employees, or your IP address. We do not use cookies.'],
         ['Optional email', 'Only if you choose to be contacted. It is stored separately, with no link to your answers, and deleted at the end of the project.'],
         ['Why', 'For the scientific validation of the framework and statistical analysis. Results are published only in aggregate form, without any possibility of identifying individual organisations.'],
         ['Legal basis', 'Your consent (Art. 6(1)(a) GDPR), which you can withdraw at any time without affecting processing already carried out.'],
