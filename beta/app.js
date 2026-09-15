@@ -28,11 +28,13 @@
     clear() { try { localStorage.removeItem(STORE_KEY); } catch (e) { /* idem */ } }
   };
 
+  // Con ?test=1 le analisi sono marcate TEST- e si possono togliere dal foglio (cleanupTests nel backend).
   function newSid() {
     const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const bytes = new Uint8Array(8);
     window.crypto.getRandomValues(bytes);
-    return 'CC-' + Array.from(bytes, b => abc[b % abc.length]).join('');
+    const prefix = new URLSearchParams(location.search).has('test') ? 'TEST-' : 'CC-';
+    return prefix + Array.from(bytes, b => abc[b % abc.length]).join('');
   }
 
   function fresh() {
@@ -45,12 +47,13 @@
       direct: { I2: '', I3: '' }, directNotes: { I2: '', I3: '' }, overrides: {},
       interventions: {}, monitoring: {},
       feedback: {}, contact: { ok: false, email: '' },
-      timings: {}, reached: {}, rev: 0, sentHash: '', code: ''
+      timings: {}, reached: {}, rev: 0, sentHash: '', code: '', outbox: []
     };
   }
 
   let S = store.load();
   if (!S || S.schema !== 1) S = fresh();
+  if (!Array.isArray(S.outbox)) S.outbox = [];
   let lang = pickLang();
   let R = evaluate();
   let enteredAt = Date.now();
@@ -460,6 +463,7 @@
   function thanksHTML() {
     const k = key => t('thanks.' + key);
     return `<section class="thanks"><h2 class="sec">${esc(k('title'))}</h2><p class="lead">${esc(k('body'))}</p>
+      <p class="sync mono" id="sync-status" role="status"></p>
       <p class="code mono">${esc(k('code').replace('{code}', S.code))}</p><p class="note">${esc(k('codeNote'))}</p>
       <div class="actions" style="margin-top:18px"><button type="button" class="btn primary" data-action="print">${esc(k('download'))}</button>
       <button type="button" class="btn ghost" data-action="newrun">${esc(k('newRun'))}</button></div>
@@ -647,6 +651,7 @@
     renderStepper();
     $('#app').innerHTML = STEPS[S.step]();
     updateOutputs();
+    updateSyncStatus();
   }
 
   function goTo(step) {
@@ -662,12 +667,14 @@
     render();
     const top = $('#stepper').offsetTop;
     if (window.scrollY > top) window.scrollTo(0, top);
-    if (step === RESULTS_STEP) sendAssessment(false);
+    if (step === RESULTS_STEP) queueAssessment();
   }
 
   function reset() {
+    const pending = S.outbox;   // gli invii non ancora confermati sopravvivono alla nuova analisi
     store.clear();
     S = fresh();
+    S.outbox = pending;
     enteredAt = Date.now();
     persist();
     render();
@@ -757,21 +764,64 @@
     if (!EMAIL_RE.test(email)) { out.textContent = t('privacy.requestError'); return; }
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled = true;
-    const ok = await post('requests', { code: data.get('code'), kind: data.get('kind'), message: data.get('message'), email }, data.get('website')).catch(() => false);
+    const msg = { id: newMsgId(), type: 'requests', row: { code: data.get('code'), kind: data.get('kind'), message: data.get('message'), email }, hp: data.get('website') || '' };
+    const ok = await post(msg).catch(() => false);
     btn.disabled = false;
     out.textContent = ok ? t('privacy.requestSent') : t('privacy.requestError');
     if (ok) form.reset();
   }
 
   // ---------- invio dati ----------
-  async function post(type, row, honeypot) {
+  // Apps Script esegue doPost e poi risponde con un redirect verso la pagina del risultato,
+  // che può impiegare decine di secondi. Il redirect basta a sapere che la riga è stata scritta:
+  // con redirect 'manual' non lo seguiamo, e keepalive porta a termine l'invio anche se la pagina si chiude.
+  async function post(msg) {
     const res = await fetch(ENDPOINT, {
-      method: 'POST',
+      method: 'POST', redirect: 'manual', keepalive: true,
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ type, row, hp: honeypot || S.hp || '' })
+      body: JSON.stringify(msg)
     });
-    const data = await res.json();
+    if (res.type === 'opaqueredirect') return true;
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => null);
     return !!(data && data.ok);
+  }
+
+  function newMsgId() {
+    const bytes = new Uint8Array(9);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Coda degli invii: salvata nel browser, svuotata quando il server conferma, ritentata finché serve.
+  let flushing = false, retryTimer = null;
+  function enqueue(type, row) {
+    S.outbox.push({ id: newMsgId(), type, row, hp: S.hp || '' });
+    store.save(S);
+    flush();
+  }
+
+  async function flush() {
+    if (flushing || !S.outbox.length) return;
+    flushing = true;
+    clearTimeout(retryTimer);
+    for (const msg of S.outbox.slice()) {
+      const ok = await post(msg).catch(() => false);
+      if (!ok) break;
+      S.outbox = S.outbox.filter(m => m.id !== msg.id);
+      store.save(S);
+    }
+    flushing = false;
+    updateSyncStatus();
+    if (S.outbox.length) retryTimer = setTimeout(flush, 20000);
+  }
+
+  function updateSyncStatus() {
+    const el = $('#sync-status');
+    if (!el) return;
+    const pending = S.outbox.length > 0;
+    el.textContent = pending ? t('thanks.syncing') : t('thanks.synced');
+    el.classList.toggle('ok', !pending);
   }
 
   function beacon(step) {
@@ -844,19 +894,18 @@
     };
   }
 
-  // Invia la valutazione quando si arriva ai risultati; se nel frattempo è cambiata, ne invia una nuova revisione.
-  async function sendAssessment(required) {
-    if (!S.consent) return true;
+  // Accoda la valutazione quando si arriva ai risultati; se nel frattempo è cambiata, ne accoda una nuova revisione.
+  function queueAssessment() {
+    if (!S.consent) return;
     R = evaluate();
-    if (!R.baseline.complete && !R.prevailing.length) return true;
+    if (!R.baseline.complete && !R.prevailing.length) return;
     const row = assessmentRow();
     const h = hash(row.inputs_json + row.results_json);
-    if (h === S.sentHash) return true;
-    row.rev = S.rev + 1;
-    const ok = await post('assessments', row).catch(() => false);
-    if (ok) { S.rev = row.rev; S.sentHash = h; persist(); }
-    if (!ok && required) throw new Error('assessment');
-    return ok;
+    if (h === S.sentHash) return;
+    S.rev += 1;
+    S.sentHash = h;
+    row.rev = S.rev;
+    enqueue('assessments', row);
   }
 
   function feedbackRow() {
@@ -870,28 +919,20 @@
     };
   }
 
-  async function submitFeedback() {
-    const f = S.feedback, msg = $('#fb-msg'), btn = $('#submit-btn');
+  function submitFeedback() {
+    const f = S.feedback, msg = $('#fb-msg');
     const show = text => { msg.textContent = text; msg.classList.add('show'); };
     if (['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'c1', 'c2', 'role', 'experience'].some(k => !f[k])) return show(t('feedback.required'));
     if (S.contact.ok && !EMAIL_RE.test((S.contact.email || '').trim())) return show(t('feedback.invalidEmail'));
-    msg.classList.remove('show');
-    btn.disabled = true;
-    btn.textContent = t('feedback.sending');
-    try {
-      await sendAssessment(true);
-      if (!(await post('feedback', feedbackRow()))) throw new Error('feedback');
-      if (S.contact.ok) await post('contacts', { lang, email: S.contact.email.trim(), interview_consent: true }).catch(() => false);
-      S.code = S.sid;
-      S.contact.email = '';   // dopo l'invio l'email non resta salvata nel browser
-      persist();
-      render();
-      printReport();
-    } catch (err) {
-      btn.disabled = false;
-      btn.textContent = t('feedback.submit');
-      show(t('feedback.error'));
-    }
+    queueAssessment();
+    enqueue('feedback', feedbackRow());
+    // L'email resta nel browser solo finché il server non conferma l'invio.
+    if (S.contact.ok) enqueue('contacts', { lang, email: S.contact.email.trim(), interview_consent: true });
+    S.code = S.sid;
+    S.contact.email = '';
+    persist();
+    render();
+    printReport();
   }
 
   function fillPrint() {
@@ -919,4 +960,5 @@
 
   if (S.step > 0 && !S.consent) S.step = 0;
   render();
+  flush();
 })();

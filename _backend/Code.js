@@ -5,7 +5,8 @@
  *
  * Web app anonima collegata al foglio "CCF 2.0 beta — Dati validazione".
  * Il sito invia JSON in POST (Content-Type text/plain, così il browser non fa preflight CORS)
- * e ogni messaggio diventa una riga nella scheda del suo tipo.
+ * e ogni messaggio diventa una riga nella scheda del suo tipo. Il sito non legge la risposta:
+ * gli basta il redirect, che Apps Script emette dopo aver eseguito doPost.
  *
  * Privacy by design: il nome dell'organizzazione e della sede restano nel browser;
  * l'email facoltativa finisce in "contacts" senza alcun collegamento alle risposte.
@@ -36,14 +37,33 @@ var TABS = {
 
 var MAX_BODY = 100000;        // byte massimi per messaggio
 var MAX_PER_WINDOW = 600;     // messaggi accettati ogni 10 minuti (freno contro gli abusi)
+var TIME_ZONE = 'Europe/Rome';
 
 /** Da eseguire una volta dall'editor: autorizza lo script e crea le schede con le intestazioni. */
 function setup() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.setSpreadsheetTimeZone(TIME_ZONE);
   Object.keys(TABS).forEach(function (name) { sheet_(ss, name); });
   ['Foglio1', 'Sheet1'].forEach(function (name) {
     var sh = ss.getSheetByName(name);
     if (sh && ss.getSheets().length > 1 && sh.getLastRow() === 0) ss.deleteSheet(sh);
+  });
+}
+
+/**
+ * Da eseguire a mano dall'editor quando serve: elimina le righe di prova, cioè quelle con
+ * sid o codice che inizia con "TEST-" (le sessioni aperte con circularcommuting.it/beta/?test=1).
+ */
+function cleanupTests() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  Object.keys(TABS).forEach(function (name) {
+    var sh = ss.getSheetByName(name);
+    var col = TABS[name].indexOf('sid') + 1 || TABS[name].indexOf('code') + 1;
+    if (!sh || !col || sh.getLastRow() < 2) return;
+    var values = sh.getRange(2, col, sh.getLastRow() - 1, 1).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      if (String(values[i][0]).indexOf('TEST-') === 0) sh.deleteRow(i + 2);
+    }
   });
 }
 
@@ -65,11 +85,20 @@ function doPost(e) {
     var lock = LockService.getScriptLock();
     lock.waitLock(15000);
     try {
+      // Il sito ritenta gli invii non confermati: lo stesso id messaggio viene scritto una volta sola.
+      var cache = CacheService.getScriptCache();
+      var seenKey = msg.id ? 'm' + String(msg.id).slice(0, 40) : null;
+      if (seenKey && cache.get(seenKey)) return json_({ ok: true, duplicate: true });
       if (!withinQuota_()) return json_({ ok: false, error: 'busy' });
       var ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (!cache.get('tz')) {
+        if (ss.getSpreadsheetTimeZone() !== TIME_ZONE) ss.setSpreadsheetTimeZone(TIME_ZONE);
+        cache.put('tz', '1', 21600);
+      }
       var headers = TABS[msg.type];
       var row = headers.map(function (h) { return h === 'received_at' ? new Date() : safe_(msg.row[h]); });
       sheet_(ss, msg.type).appendRow(row);
+      if (seenKey) cache.put(seenKey, '1', 21600);
     } finally {
       lock.releaseLock();
     }
