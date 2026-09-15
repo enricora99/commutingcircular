@@ -223,7 +223,8 @@ details.help-more[open] summary::after{content:"−"}
 .help-author{display:grid;grid-template-columns:36px 1fr;gap:12px}
 .help-author .avatar{width:36px;height:36px;font-size:12px}
 .help-author b{font-weight:700;font-size:14px}
-.help-author span{display:block;margin-top:1px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-deep)}
+/* solo il ruolo, non il pallino delle iniziali: una regola su tutte le span ne romperebbe il centramento */
+.help-author .help-author-role{display:block;margin-top:1px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-deep)}
 .help-author p{margin-top:4px;font-size:13px}
 @media(max-width:640px){
   .help-panel{top:auto;bottom:0;height:auto;max-height:86vh;width:100%;border-radius:18px 18px 0 0;transform:translateY(100%)}

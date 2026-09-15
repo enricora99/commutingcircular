@@ -37,6 +37,8 @@
     i5_remote: 'laptop', i5_cowork: 'building', i5_redistribute: 'calendar'
   };
   const PRESELECT = 3;   // interventi principali proposti già selezionati: la valutazione resta breve
+  // motivi per lasciare l'email: aggiornamenti sulla pubblicazione, validazione sul campo, collaborazione, colloquio
+  const WANTS = ['updates', 'field', 'collab', 'interview'];
   const CI_REF = CCF.MODES[0].e / CCF.MODES[0].o * CCF.PHI.fossil;   // auto termica con una sola persona
   const RADAR_SHORT = { I1: 'I1', I2: 'I2', I3: 'I3', I4: 'I4', I5: 'I5', CI: 'CI', DATA: 'DMS', GOV: 'GCS' };
 
@@ -68,7 +70,7 @@
       acc: Array(7).fill(''), cdr: Array(5).fill(''),
       direct: { I2: '', I3: '' }, directNotes: { I2: '', I3: '' }, overrides: {}, skipped: {},
       interventions: {}, monitoring: {},
-      feedback: {}, contact: { ok: false, email: '' },
+      feedback: {}, contact: { updates: false, field: false, collab: false, interview: false, email: '' },
       timings: {}, reached: {}, rev: 0, sentHash: '', code: '', outbox: []
     };
   }
@@ -91,6 +93,9 @@
   else if (S.schema === 1) S = migrate(S);
   if (!Array.isArray(S.outbox)) S.outbox = [];
   if (!S.skipped) S.skipped = {};
+  if (!S.contact) S.contact = fresh().contact;
+  // la prima versione aveva una sola casella: diventa la disponibilità al colloquio
+  if (S.contact.ok !== undefined) { S.contact.interview = !!S.contact.ok; delete S.contact.ok; }
   let lang = pickLang();
   let R = evaluate();
   let enteredAt = Date.now();
@@ -660,12 +665,16 @@
     final() {
       const x = t('q.final');
       const ch = S.feedback.channel || '';
+      const c = S.contact;
+      const any = WANTS.some(k => c[k]);
       return head({ title: x.title }) + `<div class="card final-card">
           <div class="field"><span class="field-label">${esc(x.channel)} <em>${esc(t('ui.optional'))}</em></span>
             <div class="chips">${entries(x.channels).map(([v, l]) => `<button type="button" class="chip${ch === v ? ' on' : ''}" data-choose="feedback.channel" data-value="${v}" aria-pressed="${ch === v}">${esc(l)}</button>`).join('')}</div></div>
           <label class="field"><span class="field-label">${esc(x.open)} <em>${esc(t('ui.optional'))}</em></span><textarea rows="3" data-bind="feedback.open">${esc(S.feedback.open || '')}</textarea></label>
-          <label class="check"><input type="checkbox" data-bind="contact.ok" data-rerender${S.contact.ok ? ' checked' : ''}><span>${esc(x.contact)}</span></label>
-          ${S.contact.ok ? `<label class="field"><span class="field-label">${esc(x.email)}</span><input type="email" data-bind="contact.email" value="${esc(S.contact.email)}" autocomplete="email"></label><p class="muted small">${esc(x.contactNote)}</p>` : ''}
+          <div class="field keep-in-touch"><span class="field-label">${esc(x.contactTitle)} <em>${esc(t('ui.optional'))}</em></span>
+            <p class="muted small">${esc(x.contactIntro)}</p>
+            <div class="checks">${WANTS.map(k => `<label class="check"><input type="checkbox" data-bind="contact.${k}" data-rerender${c[k] ? ' checked' : ''}><span>${esc(x.wants[k])}</span></label>`).join('')}</div>
+            ${any ? `<label class="field"><span class="field-label">${esc(x.email)}</span><input type="email" data-bind="contact.email" value="${esc(c.email || '')}" autocomplete="email"></label><p class="muted small">${esc(x.contactNote)}</p>` : ''}</div>
           <p class="form-msg" id="form-msg" role="alert"></p></div>`;
     },
 
@@ -674,6 +683,7 @@
       return `<div class="hero-band thanks-band">${seaLayer('sea-soft')}<div class="hero-band-inner">
           <span class="thanks-check">${ICON('check')}</span>
           <h1 class="q-title" tabindex="-1">${esc(x.title)}</h1><p class="lede">${esc(x.body)}</p>
+          ${S.contactAsked ? `<p class="lede">${ICON('mail')} ${esc(x.contactLine)}</p>` : ''}
           <p class="sync" id="sync-status" role="status"></p></div></div>
         <div class="card thanks-card">
           <p class="code num">${esc(x.code.replace('{code}', S.code))}</p><p class="muted">${esc(x.codeNote)}</p>
@@ -924,11 +934,22 @@
   }
 
   // ---------- navigazione ----------
+  let modesWarned = false;
   function go(delta) {
     clearTimeout(autoTimer);
     const idx = currentList.findIndex(s => s.id === S.pos);
     const sc = currentList[idx];
     if (delta > 0 && sc && !answered(sc)) return;
+    // ripartizione dei mezzi incompleta: la prima volta avvisa, alla seconda va avanti comunque
+    if (delta > 0 && sc && sc.kind === 'modes' && !modesWarned) {
+      const tot = CCF.num(S.profile.employees), sum = R.baseline.N;
+      const x = t('q.modes');
+      if (tot && sum !== tot) {
+        modesWarned = true;
+        toast(sum < tot ? x.warnMissing.replace('{n}', fmt(tot - sum)) : x.warnOver.replace('{n}', fmt(sum - tot)));
+        return;
+      }
+    }
     const next = clamp(idx + delta, 0, currentList.length - 1);
     if (next === idx) return;
     const target = currentList[next];
@@ -1216,7 +1237,7 @@
     const C = CONTENT.contact;
     const mail = C.mailUser + '@' + C.mailDomain;
     const authors = CONTENT.authors.map(a => `<div class="help-author"><span class="avatar" aria-hidden="true">${esc(a.initials)}</span>
-      <div><b>${esc(a.name)}</b><span>${esc(a.role[lang])}</span><p>${esc(a.bio[lang])}</p></div></div>`).join('');
+      <div><b>${esc(a.name)}</b><span class="help-author-role">${esc(a.role[lang])}</span><p>${esc(a.bio[lang])}</p></div></div>`).join('');
     $('#help-body').innerHTML = `<h3 id="help-title">${esc(title)}</h3>${(body || []).map(p => `<p>${esc(p)}</p>`).join('')}
       ${fw ? `<div class="help-fw"><strong>${esc(t('ui.helpFw'))}</strong>${esc(fw)}</div>` : ''}${keys}
       <div class="help-contact"><strong>${esc(H.contact.title)}</strong><p>${esc(H.contact.text.replace('{name}', C.name))}</p>
@@ -1512,10 +1533,17 @@
       render('back');
       return;
     }
-    if (S.contact.ok && !EMAIL_RE.test((S.contact.email || '').trim())) { if (msg) msg.textContent = t('q.final.invalidEmail'); return; }
+    const wants = WANTS.filter(k => S.contact[k]);
+    if (wants.length && !EMAIL_RE.test((S.contact.email || '').trim())) { if (msg) msg.textContent = t('q.final.invalidEmail'); return; }
     queueResponse('submitted');
-    // l'email resta nel browser solo finché il server non conferma l'invio
-    if (S.contact.ok) enqueue('contacts', { lang, email: S.contact.email.trim(), interview_consent: true });
+    // l'email va in una scheda a parte, senza collegamento alle risposte, e resta nel browser solo fino alla conferma
+    if (wants.length) {
+      enqueue('contacts', {
+        lang, email: S.contact.email.trim(), interview_consent: !!S.contact.interview,
+        updates: !!S.contact.updates, field_validation: !!S.contact.field, collaboration: !!S.contact.collab
+      });
+    }
+    S.contactAsked = wants.length > 0;
     S.code = S.sid;
     S.contact.email = '';
     S.pos = 'thanks';

@@ -8,7 +8,9 @@ const vm = require('vm');
 
 function makeSheet(name) {
   const sh = {
-    name, data: [], maxRows: 1000,
+    name, data: [], maxRows: 1000, maxCols: 26,
+    getMaxColumns: () => sh.maxCols,
+    insertColumnsAfter: (n, k) => { sh.maxCols += k; },
     getName: () => sh.name, setName: n => { sh.name = n; },
     getLastRow: () => { for (let i = sh.data.length - 1; i >= 0; i--) if (sh.data[i] && sh.data[i].some(v => v !== '' && v !== undefined && v !== null)) return i + 1; return 0; },
     getLastColumn: () => Math.max(0, ...sh.data.map(r => (r ? r.length : 0))),
@@ -162,6 +164,20 @@ test('messaggi duplicati, sid non valido, contatti e formato della prima version
   assert.strictEqual(rows('contatti')[0].email, 'a@b.it');
   post({ id: 'l1', type: 'assessments', row: { sid: 'CC-GGGGGGGG', rev: 1, i1: 50 } });
   assert.strictEqual(rows('archivio_assessments')[0].i1, 50);
+});
+
+test('i contatti registrano i motivi scelti e una colonna nuova allunga l\'intestazione esistente', () => {
+  const { ss, post, rows } = load();
+  post({ id: 'k1', type: 'contacts', row: { lang: 'it', email: 'a@b.it', interview_consent: true, updates: true, field_validation: false, collaboration: true } });
+  const sh = ss.getSheetByName('contatti');
+  sh.data[0] = sh.data[0].slice(0, 4);          // com'era la scheda prima delle nuove colonne
+  post({ id: 'k2', type: 'contacts', row: { lang: 'it', email: 'c@d.it', updates: true, field_validation: true } });
+  assert.deepStrictEqual(sh.data[0], ['received_at', 'lang', 'email', 'interview_consent', 'updates', 'field_validation', 'collaboration']);
+  const r = rows('contatti');
+  assert.strictEqual(r[0].collaboration, true);
+  assert.strictEqual(r[0].field_validation, false);
+  assert.strictEqual(r[1].field_validation, true);
+  assert.strictEqual(r[1].interview_consent, '');
 });
 
 test('il dizionario descrive ogni colonna e il riepilogo usa solo colonne esistenti', () => {

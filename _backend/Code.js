@@ -22,7 +22,7 @@
  */
 
 var SCHEMA = 3;
-var SCHEMA_TAG = '3.4';      // cambia quando dizionario o riepilogo vanno rigenerati
+var SCHEMA_TAG = '3.5';      // cambia quando dizionario o riepilogo vanno rigenerati
 var TIME_ZONE = 'Europe/Rome';
 var MAX_BODY = 100000;        // byte massimi per messaggio
 var MAX_PER_WINDOW = 600;     // messaggi accettati ogni 10 minuti (freno contro gli abusi)
@@ -54,7 +54,7 @@ var COLS = {
   mezzi: ['updated_at', 'sid', 'is_test', 'rev', 'stage', 'mode', 'n', 'share_pct', 'one_way_km', 'distance_custom', 'days_year',
     'e_kwh_km', 'occupancy', 'capacity', 'phi_g_kwh', 'params_custom', 'pax_km', 'ei_kwh_paxkm', 'load_factor', 'ci_g_paxkm', 'tco2e'],
   avanzamento: ['received_at', 'sid', 'is_test', 'step', 'step_name', 'version', 'lang'],
-  contatti: ['received_at', 'lang', 'email', 'interview_consent'],
+  contatti: ['received_at', 'lang', 'email', 'interview_consent', 'updates', 'field_validation', 'collaboration'],
   richieste: ['received_at', 'code', 'kind', 'message', 'email']
 };
 
@@ -96,6 +96,14 @@ function cleanupTests() {
       if (String(values[i][0]).indexOf('TEST-') === 0) sh.deleteRow(i + 2);
     }
   });
+  // nei contatti non c'è il sid: le prove usano indirizzi @example.com
+  var ct = ss.getSheetByName('contatti');
+  if (ct && ct.getLastRow() > 1) {
+    var mails = ct.getRange(2, COLS.contatti.indexOf('email') + 1, ct.getLastRow() - 1, 1).getValues();
+    for (var j = mails.length - 1; j >= 0; j--) {
+      if (/@example\.com$/i.test(String(mails[j][0]))) ct.deleteRow(j + 2);
+    }
+  }
 }
 
 function doGet() {
@@ -271,7 +279,7 @@ function ensureSchema_(ss, force) {
 
 function sheet_(ss, name) {
   var sh = ss.getSheetByName(name);
-  if (sh) return sh;
+  if (sh) { syncHeader_(sh, name); return sh; }
   sh = ss.insertSheet(name);
   var cols = COLS[name];
   var head = sh.getRange(1, 1, 1, cols.length);
@@ -284,6 +292,21 @@ function sheet_(ss, name) {
     if (i >= 0) sh.getRange(2, i + 1, sh.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy hh:mm');
   });
   return sh;
+}
+
+/**
+ * Quando allo schema si aggiungono colonne in fondo, allunga l'intestazione della scheda che esiste già.
+ * Se l'intestazione è diversa dall'inizio non la tocca: le schede vecchie restano come sono.
+ */
+function syncHeader_(sh, name) {
+  var cols = COLS[name];
+  var n = Math.max(sh.getLastColumn(), 1);
+  var head = sh.getRange(1, 1, 1, n).getValues()[0].map(String);
+  while (head.length && head[head.length - 1] === '') head.pop();
+  if (head.length >= cols.length && cols.every(function (c, i) { return head[i] === c; })) return;
+  if (!head.every(function (h, i) { return h === cols[i]; })) return;
+  if (sh.getMaxColumns() < cols.length) sh.insertColumnsAfter(sh.getMaxColumns(), cols.length - sh.getMaxColumns());
+  sh.getRange(1, 1, 1, cols.length).setValues([cols]).setFontWeight('bold').setBackground(HEADER_COLOR[name] || '#ECF5F0').setWrap(true).setVerticalAlignment('middle');
 }
 
 function headerNotes_(sh, name, entries) {
@@ -487,8 +510,11 @@ function dictionary_() {
   add(A, 'lang', 'Lingua.', 'it; en');
   add('contatti', 'received_at', 'Data e ora dell\'invio.');
   add('contatti', 'lang', 'Lingua.');
-  add('contatti', 'email', 'Email lasciata per un eventuale colloquio. Nessun collegamento con le risposte.');
-  add('contatti', 'interview_consent', 'Disponibilità a un breve colloquio.', 'TRUE');
+  add('contatti', 'email', 'Email lasciata per i contatti scelti in fondo al questionario. Nessun collegamento con le risposte.');
+  add('contatti', 'interview_consent', 'Disponibile a un breve colloquio sui risultati.', 'TRUE / FALSE');
+  add('contatti', 'updates', 'Vuole essere avvisato quando l\'articolo viene pubblicato.', 'TRUE / FALSE');
+  add('contatti', 'field_validation', 'Disponibile a una validazione sul campo, con i dati della sua sede.', 'TRUE / FALSE');
+  add('contatti', 'collaboration', 'Interessato a una collaborazione con l\'università: tesi, ricerca o dottorato.', 'TRUE / FALSE');
   add('richieste', 'received_at', 'Data e ora della richiesta.');
   add('richieste', 'code', 'Codice risposta indicato (coincide con sid).');
   add('richieste', 'kind', 'Tipo di richiesta.', 'delete; access; other');
@@ -577,6 +603,14 @@ function writeSummary_(ss) {
   add('Complessità di governance corretta', pct('COUNTIFS(' + ivReal + ',' + iv('selected') + ',TRUE,' + iv('gcs_overridden') + ',TRUE)', 'COUNTIFS(' + ivReal + ',' + iv('selected') + ',TRUE)'), '', '0%');
   add('Candidati aggiunti o tolti rispetto alla preselezione', '=IFERROR(SUMIFS(' + r('selection_changed_n') + ',' + real + '),0)', 'Somma su tutte le analisi.');
   add('Punteggio dati limitato dal DMS', pct('COUNTIFS(' + ivReal + ',' + iv('data_capped') + ',TRUE)', 'COUNTIFS(' + ivReal + ',' + iv('selected') + ',TRUE)'), '', '0%');
+
+  section('Contatti e prossimi passi');
+  var ct = function (n) { return col_('contatti', n); };
+  add('Email lasciate', '=COUNTIF(' + ct('email') + ',"?*")', 'Nella scheda contatti, senza collegamento alle risposte.');
+  add('Vogliono essere avvisati della pubblicazione', '=COUNTIF(' + ct('updates') + ',TRUE)');
+  add('Disponibili a una validazione sul campo', '=COUNTIF(' + ct('field_validation') + ',TRUE)', 'Con i dati della loro sede: la base per uno studio più solido.');
+  add("Interessati a una collaborazione con l'università", '=COUNTIF(' + ct('collaboration') + ',TRUE)', 'Tesi, ricerca o dottorato.');
+  add('Disponibili a un colloquio sui risultati', '=COUNTIF(' + ct('interview_consent') + ',TRUE)');
 
   var out = [['Riepilogo della validazione · schema ' + SCHEMA_TAG, '', ''], ['Le righe di prova (TEST-) sono sempre escluse. Il significato di ogni colonna è nella scheda dizionario.', '', ''], ['Indicatore', 'Valore', 'Nota']];
   var formats = [];

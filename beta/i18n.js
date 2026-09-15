@@ -65,6 +65,8 @@ window.CCF_I18N = {
       modes: {
         title: 'Come arrivano in sede?', sub: 'Indica quante persone usano abitualmente ciascun mezzo. Totale della sede: {tot}.',
         assigned: '{sum} su {tot} assegnate', remaining: 'ne restano {n}', over: '{n} oltre il totale', fill: 'Assegna i restanti',
+        warnMissing: 'Ti mancano ancora {n} persone da assegnare. Tocca di nuovo «Avanti» per continuare così.',
+        warnOver: 'Hai assegnato {n} persone in più del totale della sede. Tocca di nuovo «Avanti» per continuare così.',
         teaser: '≈ {t} t CO₂e all\'anno', teaserNone: 'Aggiungi almeno un mezzo per stimare le emissioni',
         advanced: 'Parametri dei veicoli, per esperti',
         advancedNote: "Valori di partenza ricavati dalle Tab. 2.1–2.2 della tesi (ISPRA 2024, EEA 2023, UITP 2022); moto ed e-bike sono indicativi. Cambiali se hai dati reali, per esempio l'occupazione media della navetta.",
@@ -223,7 +225,15 @@ window.CCF_I18N = {
         title: "Un'ultima cosa, se ti va",
         channel: 'Come hai conosciuto lo strumento?', channels: { linkedin: 'LinkedIn', newsletter: 'Newsletter o evento', network: 'Collega o rete professionale', search: 'Ricerca online', other: 'Altro' },
         open: 'Cosa cambieresti o aggiungeresti?',
-        contact: 'Sono disponibile a essere ricontattato per un breve colloquio sui risultati', email: 'Email',
+        contactTitle: 'Restiamo in contatto?',
+        contactIntro: 'Scegli cosa ti interessa: ti scriviamo solo per questo.',
+        wants: {
+          updates: "Avvisami quando l'articolo viene pubblicato",
+          field: 'Sono disponibile a una validazione sul campo, con i dati della mia sede',
+          collab: "Mi interessa una collaborazione con l'università: tesi, ricerca o dottorato",
+          interview: 'Sono disponibile a un breve colloquio sui risultati'
+        },
+        email: 'Email',
         contactNote: "L'email viene salvata separatamente e non è collegata alle tue risposte.",
         submit: 'Invia e scarica il report', invalidEmail: "Controlla l'indirizzo email."
       },
@@ -233,7 +243,8 @@ window.CCF_I18N = {
         code: 'Codice risposta: {code}', codeNote: "Conservalo se vorrai chiedere l'accesso o la cancellazione dei tuoi dati.",
         download: 'Scarica il report PDF', printHint: 'Nella finestra di stampa scegli «Salva come PDF».', newRun: 'Nuova analisi',
         newConfirm: 'Vuoi iniziare una nuova analisi? Quella attuale verrà cancellata da questo browser.', home: 'Torna alla home',
-        authorsTitle: 'Chi firma la ricerca', paperLine: 'Il framework è descritto nell\'articolo di ricerca «{title}».'
+        authorsTitle: 'Chi firma la ricerca', paperLine: 'Il framework è descritto nell\'articolo di ricerca «{title}».',
+        contactLine: 'Ti scriviamo all\'indirizzo che ci hai lasciato, solo per quello che hai scelto.'
       }
     },
 
@@ -336,7 +347,7 @@ window.CCF_I18N = {
       c1: { title: 'Completezza', body: ['Ci aiuta a capire se le cinque categorie bastano a descrivere i problemi reali.'], fw: 'Criterio «completezza diagnostica»: la tassonomia deve classificare le inefficienze osservate senza lasciare residui non attribuibili.' },
       c2: { title: 'Sovrapposizioni', body: ['Se uno stesso problema sembrava appartenere a due categorie, raccontacelo.'], fw: 'Criterio «completezza diagnostica»: senza sovrapposizioni tra categorie.' },
       profile: { title: 'Il tuo profilo', body: ['Serve a leggere le valutazioni per profilo professionale.'] },
-      final: { title: 'Ultimo passo', body: ["Tutto facoltativo. L'email resta separata dalle risposte e serve solo per un eventuale colloquio."] },
+      final: { title: 'Ultimo passo', body: ["Tutto facoltativo.", "Se lasci l'email, la usiamo solo per quello che hai scelto: avvisarti della pubblicazione, una validazione sul campo con i dati della tua sede, una collaborazione con l'università o un colloquio sui risultati. Resta in una scheda separata, senza collegamento alle tue risposte."] },
       thanks: { title: 'Il report', body: ['Il report si genera nel tuo browser: nella finestra di stampa scegli «Salva come PDF».', 'Il codice risposta ti serve solo per chiedere accesso o cancellazione dei dati.'] }
     },
 
@@ -345,7 +356,7 @@ window.CCF_I18N = {
       sections: [
         ['Chi tratta i dati', 'Enrico Emanuele Corazzini, che cura questo sito e la raccolta dei dati per conto degli autori dello studio indicati in questa pagina. Per qualunque richiesta usa il modulo in fondo a questa informativa.'],
         ['Quali dati raccogliamo', "Le risposte al Canvas (dati aggregati della sede: tipo e settore dell'organizzazione, numero di dipendenti, regione, ripartizione per mezzo, punteggi), i risultati calcolati, le eventuali correzioni con la loro motivazione, le risposte alla valutazione finale, ruolo ed esperienza solo se scegli di indicarli, e dati tecnici minimi (lingua, versione dello strumento, tipo di dispositivo, tempi di compilazione). Non raccogliamo il nome dell'organizzazione o della sede, che restano nel tuo browser, né dati sui singoli dipendenti, né il tuo indirizzo IP. Non usiamo cookie."],
-        ['Email facoltativa', 'Solo se scegli di essere ricontattato. È salvata separatamente, senza collegamento alle risposte, e cancellata al termine del progetto.'],
+        ['Email facoltativa', "Solo se scegli di essere avvisato della pubblicazione, di partecipare a una validazione sul campo, di valutare una collaborazione o di fare un colloquio. È salvata separatamente, senza collegamento alle risposte, e usata soltanto per il motivo che hai indicato. La cancelliamo quando i contatti che hai autorizzato si concludono, e prima se ce lo chiedi."],
         ['Perché', 'Per la validazione scientifica del framework e per analisi statistiche. I risultati sono pubblicati solo in forma aggregata, senza possibilità di risalire alle singole organizzazioni.'],
         ['Base giuridica', 'Il tuo consenso (art. 6, par. 1, lett. a GDPR), che puoi revocare in ogni momento senza pregiudicare il trattamento già effettuato.'],
         ['Dove e per quanto tempo', "In un foglio di calcolo Google con accesso riservato agli autori. Google può trattare dati anche fuori dall'Unione europea con le garanzie previste (EU-US Data Privacy Framework). Le risposte anonime sono conservate per la durata del progetto di ricerca e delle successive verifiche scientifiche."],
@@ -357,7 +368,7 @@ window.CCF_I18N = {
       requestKinds: { delete: 'Cancellazione', access: 'Accesso', other: 'Altro' }, requestMessage: 'Messaggio', requestEmail: 'Email per la risposta',
       requestSend: 'Invia richiesta', requestSent: 'Richiesta inviata. Ti risponderemo all\'indirizzo indicato.', requestError: "Invio non riuscito: controlla l'email e riprova."
     },
-    footer: { privacy: 'Informativa privacy', version: 'Beta 2.0 · motore {v}', lite: 'Versione semplificata' }
+    footer: { privacy: 'Informativa privacy', version: 'Circular Commuting Framework', lite: 'Versione semplificata' }
   },
 
   en: {
@@ -424,6 +435,8 @@ window.CCF_I18N = {
       modes: {
         title: 'How do people get to the site?', sub: 'Enter how many people usually use each mode. Site total: {tot}.',
         assigned: '{sum} of {tot} assigned', remaining: '{n} left', over: '{n} above the total', fill: 'Assign the rest',
+        warnMissing: '{n} people are still unassigned. Tap “Next” again to continue anyway.',
+        warnOver: 'You assigned {n} people more than the site total. Tap “Next” again to continue anyway.',
         teaser: '≈ {t} t CO₂e a year', teaserNone: 'Add at least one mode to estimate emissions',
         advanced: 'Vehicle parameters, for experts',
         advancedNote: 'Starting values derived from Tables 2.1–2.2 of the thesis (ISPRA 2024, EEA 2023, UITP 2022); motorcycle and e-bike values are indicative. Change them if you have real data, for instance average shuttle occupancy.',
@@ -582,7 +595,15 @@ window.CCF_I18N = {
         title: 'One last thing, if you like',
         channel: 'How did you hear about the tool?', channels: { linkedin: 'LinkedIn', newsletter: 'Newsletter or event', network: 'Colleague or professional network', search: 'Web search', other: 'Other' },
         open: 'What would you change or add?',
-        contact: 'I am available to be contacted for a short interview about the results', email: 'Email',
+        contactTitle: 'Shall we keep in touch?',
+        contactIntro: 'Pick what you are interested in: we will only write about that.',
+        wants: {
+          updates: 'Let me know when the article is published',
+          field: 'I am available for a field validation, with data from my site',
+          collab: 'I am interested in collaborating with the university: thesis, research or PhD',
+          interview: 'I am available for a short interview about the results'
+        },
+        email: 'Email',
         contactNote: 'Your email is stored separately and is not linked to your answers.',
         submit: 'Submit and download the report', invalidEmail: 'Please check the email address.'
       },
@@ -592,7 +613,8 @@ window.CCF_I18N = {
         code: 'Response code: {code}', codeNote: 'Keep it if you want to request access to or deletion of your data.',
         download: 'Download the PDF report', printHint: 'In the print dialog choose “Save as PDF”.', newRun: 'New assessment',
         newConfirm: 'Start a new assessment? The current one will be deleted from this browser.', home: 'Back to home',
-        authorsTitle: 'Who is behind the research', paperLine: 'The framework is described in the research article “{title}”.'
+        authorsTitle: 'Who is behind the research', paperLine: 'The framework is described in the research article “{title}”.',
+        contactLine: 'We will write to the address you left us, only about what you chose.'
       }
     },
 
@@ -694,7 +716,7 @@ window.CCF_I18N = {
       c1: { title: 'Completeness', body: ['It helps us understand whether five categories are enough to describe real problems.'], fw: 'Criterion “diagnostic completeness”: the taxonomy must classify observed inefficiencies without unattributable residues.' },
       c2: { title: 'Overlaps', body: ['If the same problem seemed to belong to two categories, tell us.'], fw: 'Criterion “diagnostic completeness”: without overlaps between categories.' },
       profile: { title: 'Your profile', body: ['It lets us read the evaluations by professional profile.'] },
-      final: { title: 'Last step', body: ['Everything is optional. Your email stays separate from your answers and is only used for a possible interview.'] },
+      final: { title: 'Last step', body: ['Everything is optional.', 'If you leave your email, we use it only for what you chose: news about the publication, a field validation with data from your site, a collaboration with the university or an interview about the results. It stays in a separate tab, with no link to your answers.'] },
       thanks: { title: 'The report', body: ['The report is generated in your browser: in the print dialog choose “Save as PDF”.', 'You only need the response code to request access to or deletion of your data.'] }
     },
 
@@ -703,7 +725,7 @@ window.CCF_I18N = {
       sections: [
         ['Who processes the data', 'Enrico Emanuele Corazzini, who runs this website and the data collection on behalf of the authors of the study listed on this page. For any request, use the form at the end of this notice.'],
         ['What data we collect', 'Your answers to the Canvas (aggregate site data: type and sector of the organisation, number of employees, region, split by mode, scores), the computed results, any corrections with their reasons, your answers to the final evaluation, role and experience only if you choose to share them, and minimal technical data (language, tool version, device type, completion times). We do not collect the name of the organisation or site, which stay in your browser, data on individual employees, or your IP address. We do not use cookies.'],
-        ['Optional email', 'Only if you choose to be contacted. It is stored separately, with no link to your answers, and deleted at the end of the project.'],
+        ['Optional email', 'Only if you choose to hear about the publication, to take part in a field validation, to explore a collaboration or to have an interview. It is stored separately, with no link to your answers, and used only for the reason you indicated. We delete it when the contacts you authorised end, and earlier if you ask us.'],
         ['Why', 'For the scientific validation of the framework and statistical analysis. Results are published only in aggregate form, without any possibility of identifying individual organisations.'],
         ['Legal basis', 'Your consent (Art. 6(1)(a) GDPR), which you can withdraw at any time without affecting processing already carried out.'],
         ['Where and for how long', 'In a Google spreadsheet accessible only to the authors. Google may process data outside the European Union with the required safeguards (EU-US Data Privacy Framework). Anonymous answers are kept for the duration of the research project and subsequent scientific verification.'],
@@ -715,6 +737,6 @@ window.CCF_I18N = {
       requestKinds: { delete: 'Erasure', access: 'Access', other: 'Other' }, requestMessage: 'Message', requestEmail: 'Email for our reply',
       requestSend: 'Send request', requestSent: 'Request sent. We will reply to the address provided.', requestError: 'Sending failed: check the email and try again.'
     },
-    footer: { privacy: 'Privacy notice', version: 'Beta 2.0 · engine {v}', lite: 'Simplified version' }
+    footer: { privacy: 'Privacy notice', version: 'Circular Commuting Framework', lite: 'Simplified version' }
   }
 };
