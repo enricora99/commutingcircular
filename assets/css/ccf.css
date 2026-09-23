@@ -214,6 +214,10 @@ button,input,select,textarea{font:inherit;color:inherit}
   transition:border-color var(--dur) var(--ease)}
 .help-links a:hover{border-color:var(--accent)}
 .help-links .ico{width:16px;height:16px;color:var(--accent)}
+/* ricomincia da capo: sempre in fondo al pannello, dopo i contatti */
+.help-reset{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.help-reset .btn .ico{width:16px;height:16px}
+.help-reset p{font-size:13px}
 details.help-more{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 details.help-more summary{display:flex;justify-content:space-between;gap:12px;cursor:pointer;font-size:14px;font-weight:700;color:var(--slate);list-style:none}
 details.help-more summary::-webkit-details-marker{display:none}

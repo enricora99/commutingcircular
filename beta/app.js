@@ -809,7 +809,8 @@
     else if (sc.kind === 'chapter') label = t('ui.startChapter');
     else if (sc.kind === 'results') label = t('q.results.toEval');
     else if (sc.kind === 'final') { label = t('q.final.submit'); act = 'submit'; }
-    const hint = `<span class="q-hint"><span class="q-saved">${ICON('check')}${esc(t('ui.saved'))}</span><button type="button" class="q-more" data-act="help">${esc(t('ui.moreHelp'))}</button></span>`;
+    const reset = sc.kind === 'intro' && !S.maxCh ? '' : `<button type="button" class="q-more q-reset" data-act="restart">${esc(t('ui.restart'))}</button>`;
+    const hint = `<span class="q-hint"><span class="q-saved">${ICON('check')}${esc(t('ui.saved'))}</span><button type="button" class="q-more" data-act="help">${esc(t('ui.moreHelp'))}</button>${reset}</span>`;
     return `<nav class="q-nav">${back}${hint}<button type="button" class="btn btn-primary btn-lg" data-act="${act}" id="next-btn"${ok ? '' : ' disabled'}>${esc(label)}${ICON('arrowRight')}</button></nav>`;
   }
 
@@ -1058,7 +1059,7 @@
     if (act === 'next') go(1);
     else if (act === 'back') go(-1);
     else if (act === 'resume') { S.pos = currentList.filter(s => s.ch === Math.min(S.maxCh, TOTAL_CH))[0].id; persist(); render('fwd'); }
-    else if (act === 'restart') { if (window.confirm(t('ui.restartConfirm'))) reset(); }
+    else if (act === 'restart') { if (window.confirm(t('ui.restartConfirm'))) { closeHelp(); reset(); } }
     else if (act === 'newrun') { if (window.confirm(t('q.thanks.newConfirm'))) reset(); }
     else if (act === 'help') openHelp();
     else if (act === 'privacy') openPrivacy();
@@ -1242,7 +1243,9 @@
       ${fw ? `<div class="help-fw"><strong>${esc(t('ui.helpFw'))}</strong>${esc(fw)}</div>` : ''}${keys}
       <div class="help-contact"><strong>${esc(H.contact.title)}</strong><p>${esc(H.contact.text.replace('{name}', C.name))}</p>
         <div class="help-links"><a href="mailto:${esc(mail)}">${ICON('mail')}${esc(mail)}</a><a href="${esc(C.linktree)}" target="_blank" rel="noopener">${ICON('link')}linktr.ee/corazzini</a></div>
-        <details class="help-more"><summary>${esc(H.authorsTitle)}</summary><div class="help-authors">${authors}</div></details></div>`;
+        <details class="help-more"><summary>${esc(H.authorsTitle)}</summary><div class="help-authors">${authors}</div></details></div>
+      <div class="help-reset"><button type="button" class="btn btn-ghost" data-act="restart">${ICON('loop')}${esc(t('ui.restart'))}</button>
+        <p class="muted">${esc(t('ui.restartNote'))}</p></div>`;
     $('#help-eyebrow').textContent = t('ui.helpEyebrow');
     $('.help-close').setAttribute('aria-label', t('ui.close'));
     if (!$('#help-drawer').classList.contains('open')) lastFocus = document.activeElement;

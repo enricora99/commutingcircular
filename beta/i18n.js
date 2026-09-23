@@ -13,6 +13,7 @@ window.CCF_I18N = {
       factLabel: 'Lo sapevi?', chapterMeta: '{n} domande · circa {m} min', keysHint: 'Puoi rispondere con i tasti numerici e andare avanti con Invio.', keysHelp: 'Da tastiera: i numeri scelgono la risposta, Invio va avanti, 0 vale «Non lo so».',
       estimateTag: 'Stima dai tuoi dati', presetTag: 'Proposto', optional: 'facoltativo',
       restart: 'Ricomincia da capo', restartConfirm: "Vuoi cancellare l'analisi salvata in questo browser e ricominciare?",
+      restartNote: 'Cancella le risposte salvate in questo browser e riparte dalla prima domanda.',
       resumeTitle: 'Bentornato', resumeText: 'Hai un\'analisi in corso in questo browser, al capitolo «{chapter}».', resumeBtn: 'Riprendi',
       home: 'Home', langAria: 'Lingua / Language', people: 'persone', km: 'km', percent: '%', edit: 'Modifica'
     },
@@ -383,6 +384,7 @@ window.CCF_I18N = {
       factLabel: 'Did you know?', chapterMeta: '{n} questions · about {m} min', keysHint: 'You can answer with the number keys and continue with Enter.', keysHelp: "Keyboard: numbers pick the answer, Enter moves on, 0 means “I don't know”.",
       estimateTag: 'Estimated from your data', presetTag: 'Suggested', optional: 'optional',
       restart: 'Start over', restartConfirm: 'Delete the assessment saved in this browser and start over?',
+      restartNote: 'Deletes the answers saved in this browser and starts again from the first question.',
       resumeTitle: 'Welcome back', resumeText: 'You have an assessment in progress in this browser, at the “{chapter}” chapter.', resumeBtn: 'Resume',
       home: 'Home', langAria: 'Lingua / Language', people: 'people', km: 'km', percent: '%', edit: 'Edit'
     },
