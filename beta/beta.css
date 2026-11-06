@@ -490,3 +490,6 @@ dialog#privacy::backdrop{background:rgba(27,46,42,.4)}
   .rep-foot{margin-top:18px;font-size:9.5px;color:var(--muted);text-align:center}
   .prio{-webkit-print-color-adjust:exact;print-color-adjust:exact;min-width:20px;height:20px;font-size:10px}
 }
+
+/* etichetta della modalità prova (?test=1) */
+.test-badge{display:inline-flex;align-items:center;margin-right:10px;padding:3px 8px;border-radius:var(--radius-pill);background:var(--apricot-tint);color:var(--apricot-deep);font:600 11px/1 var(--mono);letter-spacing:.08em}
