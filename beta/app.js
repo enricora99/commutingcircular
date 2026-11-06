@@ -53,11 +53,12 @@
   };
 
   // Con ?test=1 le analisi sono marcate TEST- e si possono togliere dal foglio (cleanupTests nel backend).
+  const TEST_MODE = new URLSearchParams(location.search).has('test');
   function newSid() {
     const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const bytes = new Uint8Array(8);
     window.crypto.getRandomValues(bytes);
-    const prefix = new URLSearchParams(location.search).has('test') ? 'TEST-' : 'CC-';
+    const prefix = TEST_MODE ? 'TEST-' : 'CC-';
     return prefix + Array.from(bytes, b => abc[b % abc.length]).join('');
   }
 
@@ -92,6 +93,13 @@
   if (!S || (S.schema !== 1 && S.schema !== 2)) S = fresh();
   else if (S.schema === 1) S = migrate(S);
   if (!Array.isArray(S.outbox)) S.outbox = [];
+  // ?test=1 su un browser che ha già un'analisi reale: senza questo controllo la prova verrebbe scritta come CC-
+  // e finirebbe nei dati di validazione. Si riparte con una sessione TEST-, tenendo gli invii non ancora confermati.
+  if (TEST_MODE && String(S.sid || '').indexOf('TEST-') !== 0) {
+    const pending = S.outbox;
+    S = fresh();
+    S.outbox = pending;
+  }
   if (!S.skipped) S.skipped = {};
   if (!S.contact) S.contact = fresh().contact;
   // la prima versione aveva una sola casella: diventa la disponibilità al colloquio
@@ -1286,26 +1294,32 @@
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled = true;
     const msg = { id: newMsgId(), type: 'requests', row: { code: data.get('code'), kind: data.get('kind'), message: data.get('message'), email }, hp: data.get('website') || '' };
-    const ok = await post(msg).catch(() => false);
+    const ok = (await post(msg).catch(() => 'retry')) === 'ok';
     btn.disabled = false;
     out.textContent = ok ? t('privacy.requestSent') : t('privacy.requestError');
     if (ok) form.reset();
   }
 
   // ---------- invio dati ----------
-  // Apps Script esegue doPost e poi risponde con un redirect verso la pagina del risultato, che può impiegare
-  // decine di secondi. Il redirect basta a sapere che la riga è scritta: con redirect 'manual' non lo seguiamo,
-  // e keepalive porta a termine l'invio anche se la pagina si chiude.
+  // Apps Script esegue doPost e poi risponde con un redirect verso la pagina che contiene il JSON di doPost.
+  // Il redirect arriva anche quando doPost fallisce (lock scaduto, quota, eccezione) e restituisce
+  // { ok: false }: per questo lo seguiamo e consideriamo scritto il messaggio solo con { ok: true }.
+  // I ritentativi non duplicano le righe, perché il backend riconosce l'id del messaggio.
+  // keepalive porta a termine l'invio anche se la pagina si chiude, ma il browser lo accetta solo sotto i 64 KiB.
+  const PERMANENT_ERRORS = ['size', 'type', 'sid', 'email'];
   async function post(msg) {
+    const body = JSON.stringify(msg);
     const res = await fetch(ENDPOINT, {
-      method: 'POST', redirect: 'manual', keepalive: true,
+      method: 'POST', keepalive: body.length < 60000,
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(msg)
+      body
     });
-    if (res.type === 'opaqueredirect') return true;
-    if (!res.ok) return false;
+    if (!res.ok) return 'retry';
     const data = await res.json().catch(() => null);
-    return !!(data && data.ok);
+    if (data && data.ok === true) return 'ok';
+    // un messaggio che il server rifiuta per com'è fatto non va ritentato all'infinito
+    if (data && PERMANENT_ERRORS.indexOf(data.error) >= 0) return 'drop';
+    return 'retry';
   }
 
   function newMsgId() {
@@ -1327,8 +1341,8 @@
     flushing = true;
     clearTimeout(retryTimer);
     for (const msg of S.outbox.slice()) {
-      const ok = await post(msg).catch(() => false);
-      if (!ok) break;
+      const outcome = await post(msg).catch(() => 'retry');
+      if (outcome === 'retry') break;
       S.outbox = S.outbox.filter(m => m.id !== msg.id);
       store.save(S);
     }
@@ -1345,12 +1359,11 @@
     el.classList.toggle('ok', !pending);
   }
 
+  // L'avanzamento passa dalla stessa coda delle risposte: arriva in ordine, viene ritentato se il server
+  // non conferma e non si sovrappone agli altri invii (sendBeacon non dice se la riga è stata scritta).
   function beacon(ch) {
-    if (!S.consent || !navigator.sendBeacon) return;
-    try {
-      const body = JSON.stringify({ type: 'progress', row: { sid: S.sid, step: ch, version: CCF.VERSION, lang }, hp: S.hp || '' });
-      navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'text/plain;charset=utf-8' }));
-    } catch (e) { /* il tracciamento dell'avanzamento è accessorio */ }
+    if (!S.consent) return;
+    enqueue('progress', { sid: S.sid, step: ch, version: CCF.VERSION, lang });
   }
 
   function hash(str) {
@@ -1625,6 +1638,16 @@
   });
   const topbar = $('.topbar');
   window.addEventListener('scroll', () => topbar.classList.toggle('scrolled', window.scrollY > 4), { passive: true });
+
+  // in modalità prova un'etichetta lo dice chiaramente, così non si confonde una prova con un'analisi vera
+  if (TEST_MODE) {
+    const badge = document.createElement('span');
+    badge.className = 'test-badge';
+    badge.textContent = 'TEST';
+    badge.title = 'Modalità prova: le risposte sono marcate TEST- ed escluse dalla validazione';
+    const actions = $('.topbar .actions');
+    if (actions) actions.prepend(badge);
+  }
 
   render();
   flush();
