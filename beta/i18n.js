@@ -33,7 +33,7 @@ window.CCF_I18N = {
       eyebrow: 'Beta 2.0 · validazione scientifica',
       title: 'Scopri dove si spreca energia negli spostamenti casa-lavoro della tua sede.',
       lede: 'Domande brevi, una alla volta. Alla fine ottieni il profilo di criticità della sede, le emissioni della mobilità casa-lavoro e un piano di interventi in ordine di priorità, utile anche per il PSCL.',
-      meta: [['12 min', 'durata stimata'], ['8', 'capitoli'], ['PDF', 'report finale']],
+      meta: [['12 min', 'durata stimata'], ['9', 'capitoli'], ['PDF', 'report finale']],
       cards: [
         { icon: 'radar', t: 'Cosa ottieni', d: 'Il profilo di criticità della sede, le emissioni per passeggero-km e un piano di interventi in classi A, B e C.' },
         { icon: 'clock', t: 'Cosa ti chiediamo', d: 'Dati aggregati della sede, nessun dato personale dei dipendenti. Alla fine, sei frasi da valutare.' },
@@ -404,7 +404,7 @@ window.CCF_I18N = {
       eyebrow: 'Beta 2.0 · scientific validation',
       title: "Find out where energy is wasted in your site's employee commuting.",
       lede: 'Short questions, one at a time. At the end you get the criticality profile of your site, the emissions of employee commuting and a prioritised intervention plan, also useful for your commuting plan (PSCL).',
-      meta: [['12 min', 'estimated time'], ['8', 'chapters'], ['PDF', 'final report']],
+      meta: [['12 min', 'estimated time'], ['9', 'chapters'], ['PDF', 'final report']],
       cards: [
         { icon: 'radar', t: 'What you get', d: 'The criticality profile of your site, emissions per passenger-km and an A, B, C intervention plan.' },
         { icon: 'clock', t: 'What we ask', d: 'Aggregate site data, no personal employee data. At the end, six statements to rate.' },
